@@ -132,6 +132,7 @@ def _verify_key(key, verifier):
 
 	if (verifierHash == decryptedVerifierHash):
 		return 1
+
 	return 0
 
 def _vprint(message):
