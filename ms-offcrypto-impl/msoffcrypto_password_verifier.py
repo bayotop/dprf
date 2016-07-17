@@ -72,12 +72,17 @@ def _print_ei_structure(ei):
 	print '--------------------------------------------------------'
 
 def main(args):
-	ei = EncryptionInfo(args.filename)
+    ei = parse_ei_file(args.filename)
+    verify_password(ei, args.password, args.verbose)
 
-	if (args.verbose):
+def parse_ei_file(filename):
+    return EncryptionInfo(filename)
+
+def verify_password(ei, password, verbose = 0):
+	if (verbose):
 		_print_ei_structure(ei)
 
-	password = args.password.encode('utf-16le') # UNICODE is UTF-16 LE (MS)
+	password = password.encode('utf-16le') # UNICODE is UTF-16 LE (MS)
 	hashAlgo = SHA1Hash() # SHA-1 is the only hashing algorithm specified
 
 	pHash = hashAlgo.new(ei.Verifier.Salt + password) 
@@ -88,7 +93,7 @@ def main(args):
 	pHash = pHash.new(pHash.digest() + struct.pack('<L', 0)) # block is 0x00000000
 	hFinal = pHash.digest()
 
-	print 'Final hash of key: ' + hFinal.encode('hex')
+	#print 'Final hash of key: ' + hFinal.encode('hex')
 
 	cbRequiredKeyLength = aes_key_length_from_code(ei.Header.AlgID)
 	cbHash = 20 # This is always 20, as SHA-1 is the only specified
@@ -101,7 +106,7 @@ def main(args):
 	pHash = pHash.new(tBuffer)
 	X1 = pHash.digest()
 
-	print 'X1: ' + X1.encode('hex')
+	#print 'X1: ' + X1.encode('hex')
 
 	tBuffer = bytearray([0x5C] * 64)
 
@@ -111,12 +116,12 @@ def main(args):
 	pHash = pHash.new(tBuffer)
 	X2 = pHash.digest()
 
-	print 'X2: ' + X2.encode('hex')
+	#print 'X2: ' + X2.encode('hex')
 	X3 = X1 + X2
 
 	keyDerived = X3[0:cbRequiredKeyLength]
 
-	print 'Derived key: ' + keyDerived.encode('hex')
+	#print 'Derived key: ' + keyDerived.encode('hex')
 
 	pCipher = AES.new(keyDerived, AES.MODE_ECB)
 	verifier = pCipher.decrypt(ei.Verifier.EncryptedVerifier)
@@ -126,10 +131,14 @@ def main(args):
 	pHash = pHash.new(verifier)
 	verifierHash = pHash.digest()
 
-	print 'Decrypted "EncryptedVerifier" hash: ' + verifierHash.encode('hex')
-	print 'Decrypted "EncryptedVerifierHash":  ' + decryptedVerifierHash.encode('hex')
+	#print 'Decrypted "EncryptedVerifier" hash: ' + verifierHash.encode('hex')
+	#print 'Decrypted "EncryptedVerifierHash":  ' + decryptedVerifierHash.encode('hex')
 
-	print '"%s"' % password + ' is ' + ('correct' if (verifierHash == decryptedVerifierHash) else 'incorrect') + '!'
+	#print '"%s"' % password + ' is ' + ('correct' if (verifierHash == decryptedVerifierHash) else 'incorrect') + '!'
+	
+	if (verifierHash == decryptedVerifierHash):
+		return 1
+	return 0
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
