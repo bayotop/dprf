@@ -5,6 +5,9 @@ import struct
 from Crypto.Hash.SHA import SHA1Hash
 from Crypto.Cipher import AES
 
+# Globals
+verbose = 0;
+
 class Version:
     def __init__(self, major, minor):
        	self.Major = major
@@ -49,6 +52,94 @@ def aes_key_length_from_code(x):
 		0x6610: 32  # AES-256 
 	}[x]
 
+def main(args):
+    global verbose
+    verbose = args.verbose
+
+    ei = parse_ei_file(args.filename)
+    verify_password(ei, args.password)
+
+def parse_ei_file(filename):
+    return EncryptionInfo(filename)
+
+def verify_password(ei, password):
+	if (verbose):
+		_print_ei_structure(ei)
+
+	keyDerived = _derive_key(password, ei.Verifier.Salt, ei.Header.AlgID)
+	_vprint('Derived key: ' + keyDerived.encode('hex'))
+
+	if (_verify_key(keyDerived, ei.Verifier)):
+		_vprint('"%s"' % password + ' is correct!')
+		return 1
+
+	_vprint('"%s"' % password + ' is incorrect.')
+	return 0
+
+def _derive_key(password, salt, algID):
+	password = password.encode('utf-16le') # UNICODE is UTF-16 LE (MS)
+	hashAlgo = SHA1Hash() # SHA-1 is the only hashing algorithm specified
+
+	pHash = hashAlgo.new(salt + password) 
+
+	for i in xrange(50000):
+		pHash = pHash.new(struct.pack('<L', i) + pHash.digest())
+
+	pHash = pHash.new(pHash.digest() + struct.pack('<L', 0)) # block is 0x00000000
+	hFinal = pHash.digest()
+
+	_vprint('Final hash of key: ' + hFinal.encode('hex'))
+
+	cbRequiredKeyLength = aes_key_length_from_code(algID)
+	cbHash = 20 # This is always 20, as SHA-1 is the only specified
+
+	tBuffer = bytearray([0x36] * 64)
+
+	for x in xrange(0, cbHash):
+		tBuffer[x] ^= bytearray(hFinal)[x]
+
+	pHash = pHash.new(tBuffer)
+	X1 = pHash.digest()
+
+	_vprint('X1: ' + X1.encode('hex'))
+
+	tBuffer = bytearray([0x5C] * 64)
+
+	for x in xrange(0, cbHash):
+		tBuffer[x] ^= bytearray(hFinal)[x]
+
+	pHash = pHash.new(tBuffer)
+	X2 = pHash.digest()
+
+	_vprint('X2: ' + X2.encode('hex'))
+	X3 = X1 + X2
+
+	return X3[0:cbRequiredKeyLength]
+
+def _verify_key(key, verifier):
+
+	pCipher = AES.new(key, AES.MODE_ECB)
+	verifier_bytes = pCipher.decrypt(verifier.EncryptedVerifier)
+
+	decryptedVerifierHash = pCipher.decrypt(verifier.EncryptedVerifierHash)[0:verifier.VerifierHashSize]
+
+	hashAlgo = SHA1Hash()
+	pHash = hashAlgo.new(verifier_bytes)
+	verifierHash = pHash.digest()
+
+	_vprint('Decrypted "EncryptedVerifier" hash: ' + verifierHash.encode('hex'))
+	_vprint('Decrypted "EncryptedVerifierHash":  ' + decryptedVerifierHash.encode('hex'))
+
+	if (verifierHash == decryptedVerifierHash):
+		return 1
+	return 0
+
+def _vprint(message):
+	global verbose
+
+	if (verbose):
+		print(message)
+
 def _print_ei_structure(ei):
 	print ei.raw.encode('hex')
 	print hex(ei.Version.Major)
@@ -71,75 +162,6 @@ def _print_ei_structure(ei):
 	print ei.Verifier.EncryptedVerifierHash.encode('hex')
 	print '--------------------------------------------------------'
 
-def main(args):
-    ei = parse_ei_file(args.filename)
-    verify_password(ei, args.password, args.verbose)
-
-def parse_ei_file(filename):
-    return EncryptionInfo(filename)
-
-def verify_password(ei, password, verbose = 0):
-	if (verbose):
-		_print_ei_structure(ei)
-
-	password = password.encode('utf-16le') # UNICODE is UTF-16 LE (MS)
-	hashAlgo = SHA1Hash() # SHA-1 is the only hashing algorithm specified
-
-	pHash = hashAlgo.new(ei.Verifier.Salt + password) 
-
-	for i in xrange(50000):
-		pHash = pHash.new(struct.pack('<L', i) + pHash.digest())
-
-	pHash = pHash.new(pHash.digest() + struct.pack('<L', 0)) # block is 0x00000000
-	hFinal = pHash.digest()
-
-	#print 'Final hash of key: ' + hFinal.encode('hex')
-
-	cbRequiredKeyLength = aes_key_length_from_code(ei.Header.AlgID)
-	cbHash = 20 # This is always 20, as SHA-1 is the only specified
-
-	tBuffer = bytearray([0x36] * 64)
-
-	for x in xrange(0, cbHash):
-		tBuffer[x] ^= bytearray(hFinal)[x]
-
-	pHash = pHash.new(tBuffer)
-	X1 = pHash.digest()
-
-	#print 'X1: ' + X1.encode('hex')
-
-	tBuffer = bytearray([0x5C] * 64)
-
-	for x in xrange(0, cbHash):
-		tBuffer[x] ^= bytearray(hFinal)[x]
-
-	pHash = pHash.new(tBuffer)
-	X2 = pHash.digest()
-
-	#print 'X2: ' + X2.encode('hex')
-	X3 = X1 + X2
-
-	keyDerived = X3[0:cbRequiredKeyLength]
-
-	#print 'Derived key: ' + keyDerived.encode('hex')
-
-	pCipher = AES.new(keyDerived, AES.MODE_ECB)
-	verifier = pCipher.decrypt(ei.Verifier.EncryptedVerifier)
-
-	decryptedVerifierHash = pCipher.decrypt(ei.Verifier.EncryptedVerifierHash)[0:ei.Verifier.VerifierHashSize]
-
-	pHash = pHash.new(verifier)
-	verifierHash = pHash.digest()
-
-	#print 'Decrypted "EncryptedVerifier" hash: ' + verifierHash.encode('hex')
-	#print 'Decrypted "EncryptedVerifierHash":  ' + decryptedVerifierHash.encode('hex')
-
-	#print '"%s"' % password + ' is ' + ('correct' if (verifierHash == decryptedVerifierHash) else 'incorrect') + '!'
-	
-	if (verifierHash == decryptedVerifierHash):
-		return 1
-	return 0
-
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser(
 		prog='msoffcrypto_password_verifier',
@@ -148,7 +170,6 @@ if __name__ == "__main__":
 			[MS-OFFCRYPTO] Office Document Structure - Password Verifier 
 			
 			Version 0.0.1 (alfa)
-
 			Verifies correctness of given password for given EncryptionInfo.
 			Actually supported formats:
 			    EncryptionInfo Stream (Standard Encryption)
