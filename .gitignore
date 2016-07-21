@@ -89,3 +89,10 @@ ENV/
 .ropeproject
 *.TMP
 *.pyproj
+*.514pk
+*.tfm
+*.aux
+*.out
+*.gz
+*.toc
+doc/thesis.pdf
