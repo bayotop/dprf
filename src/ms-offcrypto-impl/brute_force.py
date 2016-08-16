@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 import time
-import msoffcrypto_password_verifier
+#import msoffcrypto_password_verifier
 from Queue import Empty
 from multiprocessing import Process, JoinableQueue, Value
 import string 
 import itertools
+from subprocess import call
 
 def _init():
     q = JoinableQueue()
@@ -28,7 +29,7 @@ def _init():
 
 def _brute_force(q, counter, found):
     start = time.time()
-    ei = msoffcrypto_password_verifier.parse_ei_file("EncryptionInfo")
+    #ei = msoffcrypto_password_verifier.parse_ei_file("EncryptionInfo")
 
     while True:
         try:
@@ -36,7 +37,8 @@ def _brute_force(q, counter, found):
         except Empty:
             return
         else:
-            result = msoffcrypto_password_verifier.verify_password(ei, pwd)
+            #result = msoffcrypto_password_verifier.verify_password(ei, pwd)
+            result = call(["./msoff", pwd])
             q.task_done()
 
             if (result):
