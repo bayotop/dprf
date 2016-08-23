@@ -14,6 +14,7 @@
 / ./msoffcrypto password
 /
 / Author: Martin Bajanik 
+/ Date: 23.08.2016
 /
 / TO DO:  ALL hard-coded stuff needs to be delete -> provide CLI */
 

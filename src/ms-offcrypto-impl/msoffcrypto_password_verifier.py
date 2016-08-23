@@ -5,8 +5,18 @@ import struct
 from Crypto.Hash.SHA import SHA1Hash
 from Crypto.Cipher import AES
 
+# [MS-OFFCRYPTO] Office Document Structure - Password Verifier 
+		
+# Version 0.0.1 (alfa)
+# Verifies correctness of given password for given EncryptionInfo.
+# Actually supported formats:
+# 	EncryptionInfo Stream (Standard Encryption)
+
+# Author: Martin Bajanik
+# Date: 23.08.2016
+
 # Globals
-verbose = 0;
+verbose = 0
 
 class Version:
     def __init__(self, major, minor):
