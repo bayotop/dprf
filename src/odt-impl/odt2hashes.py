@@ -5,6 +5,7 @@ import zipfile
 import tempfile
 import textwrap
 import base64
+import os
 import xml.etree.ElementTree as et
 
 # TODO:
@@ -12,6 +13,7 @@ import xml.etree.ElementTree as et
 #           urn:oasis:names:tc:opendocument:xmlns:manifest:1.0
 #           urn:oasis:names:tc:opendocument:xmlns:digitalsignature:1.0
 #           http://docs.oasis-open.org/ns/office/1.2/meta/pkg#
+#       Refactor and implement by python best practices, make work under python 3.* etc.
 
 
 # Returns all information needed to perform offline brute-force analysis of ODT files.
@@ -34,14 +36,17 @@ class VerificationFile:
 
 # Globals
 verbose = False
+experimental = False
 ns = '{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}'
 
-# $odt$*version*checksum*iv*salt*encrypted_file_bytes
-hashes_template = '$odt$*{0}*{1}*{2}*{3}*{4}'
+# filename:$odt$*version*checksum*iv*salt*encrypted_file_bytes
+hashes_template = '{0}:$odt$*{1}*{2}*{3}*{5}*{5}'
 
 def main(args):
     global verbose
+    global experimental
     verbose = args.verbose
+    experimental = args.experimental
 
     get_hashes(args.filename)
 
@@ -62,7 +67,8 @@ def get_hashes(filename):
     smallestfile = VerificationFile(None, None);
     for fe in root.iter(ns + 'file-entry'):
         size = fe.get(ns + 'size')
-        if (size != None and (int(size) > 0) and (smallestfile.fe == None or int(size) < smallestfile.size)):
+        size_limit = -1 if experimental else 1024
+        if (size != None and (int(size) > size_limit) and (smallestfile.fe == None or int(size) < smallestfile.size)):
             smallestfile = VerificationFile(fe, int(size))
 
     encryption_data = smallestfile.fe.find(ns + 'encryption-data')
@@ -75,7 +81,7 @@ def get_hashes(filename):
     with open(temppath + "/" + smallestfile.fe.get(ns + 'full-path')) as f:
         encrypted_file_bytes = f.read()
 
-    print hashes_template.format(version, checksum.encode('hex'), iv.encode('hex'), salt.encode('hex'), encrypted_file_bytes.encode('hex'))
+    print hashes_template.format(os.path.basename(filename), version, checksum.encode('hex'), iv.encode('hex'), salt.encode('hex'), encrypted_file_bytes.encode('hex'))
 
     shutil.rmtree(temppath)
 
@@ -96,6 +102,8 @@ if __name__ == '__main__':
             '''))
 
     parser.add_argument('-v', '--verbose', help='increase output verbosity', default=False,
+                        action='store_true')
+    parser.add_argument('-e', '--experimental', help='enables experimental verification data', default=False,
                         action='store_true')
     parser.add_argument('filename', help='path to ODT file')
     args = parser.parse_args()
