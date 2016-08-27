@@ -7,6 +7,9 @@ import string
 import itertools
 from subprocess import call
 
+# Author: Martin Bajanik
+# Date: 27.08.2016
+
 def _init():
     q = JoinableQueue()
     counter = Value('i', 0)
@@ -38,7 +41,8 @@ def _brute_force(q, counter, found):
             return
         else:
             #result = msoffcrypto_password_verifier.verify_password(ei, pwd)
-            result = call(["./msoff", pwd])
+            #result = call(["./msoff", pwd])
+            result = call(["./odt", pwd])
             q.task_done()
 
             if (result):

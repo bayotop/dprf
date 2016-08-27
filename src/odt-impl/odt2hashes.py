@@ -16,7 +16,7 @@ import xml.etree.ElementTree as et
 
 # Returns all information needed to perform offline brute-force analysis of ODT files.
 # Actually supported versions:
-#   ODT 1.2
+#   ODT 1.2 with AES-256 in CBC mode
 
 # Format of returned data is:
 #   
@@ -62,8 +62,8 @@ def get_hashes(filename):
     smallestfile = VerificationFile(None, None);
     for fe in root.iter(ns + 'file-entry'):
         size = fe.get(ns + 'size')
-        if (size != None and (smallestfile.fe == None or size < smallestfile.size)):
-            smallestfile = VerificationFile(fe, size)
+        if (size != None and (int(size) > 0) and (smallestfile.fe == None or int(size) < smallestfile.size)):
+            smallestfile = VerificationFile(fe, int(size))
 
     encryption_data = smallestfile.fe.find(ns + 'encryption-data')
 
@@ -86,7 +86,7 @@ if __name__ == '__main__':
         description=textwrap.dedent('''\
             Returns all information needed to perform offline brute-force analysis of ODT files.
             Actually supported versions:
-                ODT 1.2
+                ODT 1.2 with AES-256 in CBC mode
 
             Format of returned data is:
 

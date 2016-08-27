@@ -22,6 +22,7 @@ static int verbose = 0;
 
 int verify(char *password);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *plaintext);
+int sha1(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
 int verbose_print(char *print);
 int str_to_uchar(unsigned char **output, unsigned char *str);
@@ -58,7 +59,8 @@ int verify(char *password) {
     int input_length_utf16;
 
     if (!utf8_to_utf16le(password, &pass, &input_length_utf16)) {
-        printf("shit");
+        fprintf(stderr, "Error converting password to UTF16LE.\n");
+        exit(1);
     }
 
     verbose_print("Checking: '");
@@ -78,11 +80,11 @@ int verify(char *password) {
     memcpy(initial_input + 16, pass, length);
 
     free(pass);
+    free(salt);
 
     unsigned char hash[SHA_DIGEST_LENGTH];
     sha1(initial_input, salt_length + length, hash);
 
-    free(salt);
     free(initial_input);
 
     unsigned int i; // MS-OFFCRYPTO specifies 'i' as unsiogned 32-bit value (hashing purposes)
@@ -168,7 +170,7 @@ int verify(char *password) {
     verbose_print("Decrypted 'EncryptedVerifierHash':  ");
     print_hex(decryptedVerifierHash, SHA_DIGEST_LENGTH);
 
-    for(i = 0; i < SHA_DIGEST_LENGTH; i++) {
+    for (i = 0; i < SHA_DIGEST_LENGTH; i++) {
         if (verifierHash[i] != decryptedVerifierHash[i]) {
             return 0;
         } 
