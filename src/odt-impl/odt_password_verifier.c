@@ -10,47 +10,43 @@
 
 /* Requirements: libssl-dev
 /
-/ gcc -o msoffcrypto msoffcrypto_password_verifier.c -lssl -lcrypto
-/ ./msoffcrypto password
+/ gcc -o odt odt_password_verifier.c -lssl -lcrypto
+/ ./odt password checksum iv salt encrypted_file encrypted_file_length [-v]
 /
 / Author: Martin Bajanik 
-/ Date: 27.08.2016
-/
-/ TO DO:  ALL hard-coded stuff needs to be delete -> provide CLI */
+/ Date: 27.08.2016 
+*/
 
 static int verbose = 0;
 
-int verify(char *password);
+int verify(char *password, unsigned char *checksum, unsigned char *iv, unsigned char *salt, unsigned char* encrypted_file, int encrypted_file_len);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 int sha256(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
-int str_to_uchar(unsigned char **output, unsigned char *str);
 int verbose_print(char *print);
-void parseArgs(int argc, char *argv[], char **password);
-
-// Hard coded stuff  (information from encrypted ODT)
-unsigned char *CHECKSUM = "9b4fb24edd6d1d8830e272398263cdbf026b97392cc35387b991dc0248a628f9";
-unsigned char *IV = "e31dc53b13e5177b35455086dea287dd";
-unsigned char *SALT = "399e6f2e5176f49f9958a108e3c212a3";
-unsigned char *ENCRYPTED_FILE = "3cb21bb16fab6e820daeff44f60a58a1";
 
 int main(int argc, char *argv[]) {
 
-    char *password = NULL;
-    parseArgs(argc, argv, &password);
+    if (argc != 7 && argc != 8) {    
+        fprintf(stderr, "Usage: %s password checksum iv salt encrypted_file encrypted_file_length [-v]\n", argv[0]);
+        exit(1);
+    }
 
-    ERR_load_crypto_strings();
+    if (argc == 8 && strcmp(argv[7], "-v") == 0) {
+        verbose = 1;
+    }
 
     if (verbose) {
-        (verify(password)) ? verbose_print("Correct password!\n") : verbose_print("Incorrect password!\n");
+        ERR_load_crypto_strings();
+        (verify(argv[1], argv[2], argv[3], argv[4], argv[5], atoi(argv[6]))) ? verbose_print("Correct password!\n") : verbose_print("Incorrect password!\n");
         
         return 1;
     } else {
-        return verify(password);
+        return verify(argv[1], argv[2], argv[3], argv[4], argv[5], atoi(argv[6]));
     }
 }
 
-int verify(char *password) {
+int verify(char *password, unsigned char *checksum, unsigned char *iv, unsigned char *salt, unsigned char* encrypted_file, int encrypted_file_len) {
     verbose_print("Checking: '");
     if (verbose) {
         fwrite(password, 1, strlen(password), stdout);
@@ -63,29 +59,15 @@ int verify(char *password) {
 	verbose_print("Starting key: ");
 	print_hex(start_key, SHA256_DIGEST_LENGTH);
 
-	unsigned char *salt = (unsigned char*)malloc(16);
-	str_to_uchar(&salt, SALT);
-
 	unsigned char derived_key[SHA256_DIGEST_LENGTH];
 	PKCS5_PBKDF2_HMAC_SHA1(start_key, SHA256_DIGEST_LENGTH, salt, 16, 1024, 32, derived_key);
-
-	free(salt);
 
 	verbose_print("Derived key: ");
 	print_hex(derived_key, 32);
 
-	unsigned char *iv = (unsigned char*)malloc(16);
-	str_to_uchar(&iv, IV);
-
-	unsigned char *encrypted_file = (unsigned char*)malloc(strlen(ENCRYPTED_FILE)/2);
-	int encrypted_file_len = str_to_uchar(&encrypted_file, ENCRYPTED_FILE);
-
 	unsigned char decryptedFile[encrypted_file_len];
 
 	int decryptedFile_len = decrypt(encrypted_file, encrypted_file_len, derived_key, iv, decryptedFile);
-
-    free(iv);
-    free(encrypted_file);
 
     /* This is a very unsafe password correctnes check. It assumes that the encrypted file for verification is 
     / /Configurations2/accelerator/current.xml which in many cases is an empty file with size 0. 
@@ -105,9 +87,6 @@ int verify(char *password) {
     memcpy(temp, decryptedFile, decryptedFile_len);
 	unsigned char decryptedFileHash[SHA256_DIGEST_LENGTH];
     sha256(temp, decryptedFile_len, decryptedFileHash);
-
-    unsigned char *checksum = (unsigned char*)malloc(SHA256_DIGEST_LENGTH);
-	str_to_uchar(&checksum, CHECKSUM);
 
     verbose_print("Checksum:  ");
     print_hex(checksum, SHA256_DIGEST_LENGTH);
@@ -199,37 +178,8 @@ void print_hex(unsigned char *input, int len) {
     }
 }
 
-int str_to_uchar(unsigned char **output, unsigned char *str) {
-    BIGNUM *input = BN_new();
-    int input_len = BN_hex2bn(&input, str);
-    input_len = (input_len + 1) / 2; // BN_hex2bn() returns number of hex digits
-    BN_bn2bin(input, *output);
-
-    BN_free(input);
-
-    return input_len;
-}
-
 int verbose_print(char *print) {
     if (verbose) {
         printf(print);
     }
-}
-
-void parseArgs(int argc, char *argv[], char **password) {
-    if (argc == 2) {
-        *password = argv[1];
-
-        return;
-    }
-
-    if (argc == 3 && (strcmp(argv[1], "-v") == 0)) {
-        verbose = 1;
-        *password = argv[2];
-
-        return;
-    }
-
-    fprintf(stderr, "Usage: %s [-v] password\n", argv[0]);
-    exit(1);
 }

@@ -11,47 +11,47 @@
 /* Requirements: libssl-dev
 /
 / gcc -o msoffcrypto msoffcrypto_password_verifier.c -lssl -lcrypto
-/ ./msoffcrypto password
-/
+/ ./msoffcrypto password salt salt_length encrypted_verifier encrypted_verifier_length encrypted_verifier_hash encrypted_verifier_hash_length [-v]
+/    
 / Author: Martin Bajanik 
 / Date: 23.08.2016
-/
-/ TO DO:  ALL hard-coded stuff needs to be delete -> provide CLI */
+*/
 
 static int verbose = 0;
 
-int verify(char *password);
+int verify(char *password, unsigned char *salt, int salt_len, unsigned char *encrypted_verifier, int encrypted_verifier_len, 
+    unsigned char *encrypted_verifier_hash, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *plaintext);
 int sha1(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
 int verbose_print(char *print);
-int str_to_uchar(unsigned char **output, unsigned char *str);
 int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len);
-void parseArgs(int argc, char *argv[], char **password);
-
-// Hard coded stuff  (information from EncryptionInfo)
-int AES_128_KEYSIZE = 16;
-int SALT_LENGTH = 16;
-int VERIFIER_HASH_SIZE = 20;
-unsigned char *ENCRYPTED_VERIFIER_TO_CHECK = "189576350e7b9f3c8c74b65e755417c2";
-unsigned char *ENCRYPTED_VERIFIER_HASH_TO_CHECK = "31c1ed3848d9f0b05d52b2249d357fc51eb39b62823699226284f20f960fd12f";
-unsigned char *SALT = "de40abf5f6227d08074a8f1579cd183a";
 
 int main(int argc, char *argv[]) {
 
-    char *password = NULL;
-    parseArgs(argc, argv, &password);
+    if (argc != 10 && argc != 11) {
+         fprintf(stderr, "Usage: %s password salt salt_length encrypted_verifier encrypted_verifier_length \
+            encrypted_verifier_hash encrypted_verifier_hash_length aes_key_length verifier_hash_size [-v]\n", argv[0]);
+         exit(1);
+    }
+
+    if (argc == 11 && strcmp(argv[10], "-v") == 0) {
+        verbose = 1;
+    }
 
     if (verbose) {
-        (verify(password)) ? verbose_print("Correct password!\n") : verbose_print("Incorrect password!\n");
+        (verify(argv[1], argv[2], atoi(argv[3]), argv[4], atoi(argv[5]), argv[6], atoi(argv[7]), atoi(argv[8]), atoi(argv[9]))) 
+         ? verbose_print("Correct password!\n") 
+         : verbose_print("Incorrect password!\n");
         
         return 1;
     } else {
-        return verify(password);
+        return verify(argv[1], argv[2], atoi(argv[3]), argv[4], atoi(argv[5]), argv[6], atoi(argv[7]), atoi(argv[8]), atoi(argv[9]));
     }
 }
 
-int verify(char *password) {
+int verify(char *password, unsigned char *salt, int salt_len, unsigned char *encrypted_verifier, int encrypted_verifier_len, 
+    unsigned char *encrypted_verifier_hash, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size) {
     // Prepare the input. We need to string in UTF16LE encoding.
     int input_length = strlen(password);
 
@@ -72,18 +72,14 @@ int verify(char *password) {
     // Initial hasing ( H0 = SHA1(SALT + PASSWORD) -> Hn = SHA1(i + (Hn - 1)) (50000x) -> HFinal = SHA1(H50000 + BLOCK) )
     size_t length = input_length_utf16;
 
-    unsigned char *salt = (unsigned char*)malloc(SALT_LENGTH);
-    int salt_length = str_to_uchar(&salt, SALT);
-
-    unsigned char *initial_input = calloc(salt_length + length, sizeof(char));
+    unsigned char *initial_input = calloc(salt_len + length, sizeof(char));
     memcpy(initial_input, salt, 16);
     memcpy(initial_input + 16, pass, length);
 
     free(pass);
-    free(salt);
 
     unsigned char hash[SHA_DIGEST_LENGTH];
-    sha1(initial_input, salt_length + length, hash);
+    sha1(initial_input, salt_len + length, hash);
 
     free(initial_input);
 
@@ -134,18 +130,11 @@ int verify(char *password) {
     /* verbose_print("X2: ");
     print_hex(x2, SHA_DIGEST_LENGTH); */
 
-    unsigned char finalKey[AES_128_KEYSIZE];
-    memcpy(finalKey, x1, AES_128_KEYSIZE);
+    unsigned char finalKey[aes_key_length / 8];
+    memcpy(finalKey, x1, aes_key_length / 8);
 
     verbose_print("Derived key: ");
-    print_hex(finalKey, AES_128_KEYSIZE);
-
-    // Verification
-    unsigned char *encrypted_verifier = (unsigned char*)malloc(AES_128_KEYSIZE);
-    int encrypted_verifier_len = str_to_uchar(&encrypted_verifier, ENCRYPTED_VERIFIER_TO_CHECK);
-
-    unsigned char *encrypted_verifier_hash = (unsigned char*)malloc(2*AES_128_KEYSIZE);
-    int encrypted_verifier_hash_len = str_to_uchar(&encrypted_verifier_hash, ENCRYPTED_VERIFIER_HASH_TO_CHECK);
+    print_hex(finalKey, aes_key_length / 8);
 
     unsigned char decryptedVerifier[128];
     unsigned char decryptedVerifierHash[128];
@@ -156,11 +145,9 @@ int verify(char *password) {
     }
 
     int decryptedVerifierHash_len = decrypt(encrypted_verifier_hash, encrypted_verifier_hash_len, finalKey, decryptedVerifierHash);
-    if (decryptedVerifierHash_len != 32 || decryptedVerifierHash[VERIFIER_HASH_SIZE] != 0x00) {
+    if (decryptedVerifierHash_len != 32 || decryptedVerifierHash[verifier_hash_size] != 0x00) {
         return 0;           
     }
-
-    free(encrypted_verifier); free(encrypted_verifier_hash);
     
     unsigned char verifierHash[SHA_DIGEST_LENGTH];
     sha1(decryptedVerifier, decryptedVerifier_len, verifierHash);
@@ -260,17 +247,6 @@ int verbose_print(char *print) {
     }
 }
 
-int str_to_uchar(unsigned char **output, unsigned char *str) {
-    BIGNUM *input = BN_new();
-    int input_len = BN_hex2bn(&input, str);
-    input_len = (input_len + 1) / 2; // BN_hex2bn() returns number of hex digits
-    BN_bn2bin(input, *output);
-
-    BN_free(input);
-
-    return input_len;
-}
-
 // http://stackoverflow.com/questions/13297458/simple-utf8-utf16-string-conversion-with-iconv
 int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len)
 {
@@ -333,22 +309,4 @@ int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len)
     *utf16_len = utf16_buf_len - outbytesleft;
 
     return 1;
-}
-
-void parseArgs(int argc, char *argv[], char **password) {
-    if (argc == 2) {
-        *password = argv[1];
-
-        return;
-    }
-
-    if (argc == 3 && (strcmp(argv[1], "-v") == 0)) {
-        verbose = 1;
-        *password = argv[2];
-
-        return;
-    }
-
-    fprintf(stderr, "Usage: %s [-v] password\n", argv[0]);
-    exit(1);
 }

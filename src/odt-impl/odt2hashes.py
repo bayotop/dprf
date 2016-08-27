@@ -40,7 +40,7 @@ experimental = False
 ns = '{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}'
 
 # filename:$odt$*version*checksum*iv*salt*encrypted_file_bytes
-hashes_template = '{0}:$odt$*{1}*{2}*{3}*{5}*{5}'
+hashes_template = '{0}:$odt$*{1}*{2}*{3}*{4}*{5}'
 
 def main(args):
     global verbose
