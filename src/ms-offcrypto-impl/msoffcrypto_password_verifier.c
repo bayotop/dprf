@@ -26,6 +26,8 @@ int sha1(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
 int verbose_print(char *print);
 int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len);
+int str_to_uchar(unsigned char **output, unsigned char *str);
+
 
 int main(int argc, char *argv[]) {
 
@@ -40,6 +42,7 @@ int main(int argc, char *argv[]) {
     }
 
     if (verbose) {
+        ERR_load_crypto_strings();
         (verify(argv[1], argv[2], atoi(argv[3]), argv[4], atoi(argv[5]), argv[6], atoi(argv[7]), atoi(argv[8]), atoi(argv[9]))) 
          ? verbose_print("Correct password!\n") 
          : verbose_print("Incorrect password!\n");
@@ -50,8 +53,24 @@ int main(int argc, char *argv[]) {
     }
 }
 
-int verify(char *password, unsigned char *salt, int salt_len, unsigned char *encrypted_verifier, int encrypted_verifier_len, 
-    unsigned char *encrypted_verifier_hash, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size) {
+int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char *encrypted_verifier_str, int encrypted_verifier_len, 
+    unsigned char *encrypted_verifier_hash_str, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size) {
+
+    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00). 
+    // See execve(2) semantics for more information.
+    // This has as low as no impact on perfomance.
+    unsigned char salt[salt_len];
+    unsigned char *s = salt;
+    str_to_uchar(&s, salt_str);
+
+    unsigned char encrypted_verifier[encrypted_verifier_len];
+    unsigned char *ev = encrypted_verifier;
+    str_to_uchar(&ev, encrypted_verifier_str);
+
+    unsigned char encrypted_verifier_hash[encrypted_verifier_hash_len];
+    unsigned char *evh = encrypted_verifier_hash;
+    str_to_uchar(&evh, encrypted_verifier_hash_str);
+
     // Prepare the input. We need to string in UTF16LE encoding.
     int input_length = strlen(password);
 
@@ -310,3 +329,14 @@ int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len)
 
     return 1;
 }
+
+int str_to_uchar(unsigned char **output, unsigned char *str) {
+    BIGNUM *input = BN_new();
+    int input_len = BN_hex2bn(&input, str);
+    input_len = (input_len + 1) / 2; // BN_hex2bn() returns number of hex digits
+    BN_bn2bin(input, *output);
+    
+    BN_free(input);
+    
+    return input_len;
+ }

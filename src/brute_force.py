@@ -46,11 +46,11 @@ def _brute_force(q, counter, found, input_data):
                     input_data[5], # salt
                     input_data[4], # salt_length
                     input_data[6], # encrypted_verifier
-                    str(len(input_data[6])), # encrypted_verifier_length
+                    str(len(input_data[6]) / 2), # encrypted_verifier_length
                     input_data[7], # encrypted_verifier_hash
-                    str(len(input_data[7])), # encrypted_verifier_hash_length
+                    str(len(input_data[7]) / 2), # encrypted_verifier_hash_length
                     str(input_data[3]), # aes_key_length
-                    str(input_data[2]) # verifier_hash_size
+                    str(input_data[2]), # verifier_hash_size
                     ]) 
             if (input_data[0] == "odt"):
                 result = call(["odt-impl/./odt", pwd, 
@@ -58,8 +58,8 @@ def _brute_force(q, counter, found, input_data):
                     input_data[3], #iv
                     input_data[4], #salt
                     input_data[5], #encrypted_file
-                    str(len(input_data[5]))]) #encrypted_file_length
-
+                    str(len(input_data[5]) / 2), #encrypted_file_length
+                   ]) 
             q.task_done()
 
             if (result):
@@ -106,7 +106,7 @@ def _get_verification_data(doc_type, filename):
 
 
     if (doc_type == '2'):
-        return check_output(["python", "odt-impl/odt2hashes.py" ,"-e", filename]).strip()
+        return check_output(["python", "odt-impl/odt2hashes.py", "-e", filename]).strip()
 
 def _parse_verification_data(stream):
     print 'Preparing verification data ...'
@@ -117,19 +117,10 @@ def _parse_verification_data(stream):
     data_array[0] = data_format
 
 
-    if (data_format == "office" and len(data_array) == 8):
-        data_array[5] = data_array[5].decode('hex');  
-        data_array[6] = data_array[6].decode('hex');  
-        data_array[7] = data_array[7].decode('hex');  
-
+    if (data_format == "office" and len(data_array) == 8):  
         return data_array
 
     if (data_format == "odt" and len(data_array) == 6):
-        data_array[2] = data_array[2].decode('hex');  
-        data_array[3] = data_array[3].decode('hex');  
-        data_array[4] = data_array[4].decode('hex'); 
-        data_array[5] = data_array[5].decode('hex');
-
         return data_array
 
     print "The input data is not supported."

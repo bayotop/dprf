@@ -24,6 +24,7 @@ int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, u
 int sha256(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
 int verbose_print(char *print);
+int str_to_uchar(unsigned char **output, unsigned char *str);
 
 int main(int argc, char *argv[]) {
 
@@ -46,7 +47,27 @@ int main(int argc, char *argv[]) {
     }
 }
 
-int verify(char *password, unsigned char *checksum, unsigned char *iv, unsigned char *salt, unsigned char* encrypted_file, int encrypted_file_len) {
+int verify(char *password, unsigned char *checksum_str, unsigned char *iv_str, unsigned char *salt_str, unsigned char* encrypted_file_str, int encrypted_file_len) {
+
+    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00). 
+    // See execve(2) semantics for more information.
+    // This slows down the brute-forcing by ~6 H/sec. 
+    unsigned char checksum[SHA256_DIGEST_LENGTH];
+    unsigned char *ch = checksum;
+    str_to_uchar(&ch, checksum_str);
+
+    unsigned char iv[16];
+    unsigned char *ivp = iv;
+    str_to_uchar(&ivp, iv_str);
+
+    unsigned char salt[16];
+    unsigned char *s = salt;
+    str_to_uchar(&s, salt_str);
+
+    unsigned char encrypted_file[encrypted_file_len / 2];
+    unsigned char *ef = encrypted_file;
+    str_to_uchar(&ef, encrypted_file_str);
+
     verbose_print("Checking: '");
     if (verbose) {
         fwrite(password, 1, strlen(password), stdout);
@@ -96,12 +117,10 @@ int verify(char *password, unsigned char *checksum, unsigned char *iv, unsigned 
     int i;
     for (i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         if (checksum[i] != decryptedFileHash[i]) {
-        	free(checksum);
             return 0;
         } 
     }
 
-    free(checksum);
     return 1;
 }
 
@@ -183,3 +202,14 @@ int verbose_print(char *print) {
         printf(print);
     }
 }
+
+int str_to_uchar(unsigned char **output, unsigned char *str) {
+    BIGNUM *input = BN_new();
+    int input_len = BN_hex2bn(&input, str);
+    input_len = (input_len + 1) / 2; // BN_hex2bn() returns number of hex digits
+    BN_bn2bin(input, *output);
+    
+    BN_free(input);
+    
+    return input_len;
+ }
