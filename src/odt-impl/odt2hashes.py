@@ -39,8 +39,8 @@ verbose = False
 experimental = False
 ns = '{urn:oasis:names:tc:opendocument:xmlns:manifest:1.0}'
 
-# filename:$odt$*version*checksum*iv*salt*encrypted_file_bytes
-hashes_template = '{0}:$odt$*{1}*{2}*{3}*{4}*{5}'
+# filename:$odt$*version*checksum*iv*salt*encrypted_file_bytes*encrypted_file_bytes_length
+hashes_template = '{0}:$odt$*{1}*{2}*{3}*{4}*{5}*{6}'
 
 def main(args):
     global verbose
@@ -81,7 +81,7 @@ def get_hashes(filename):
     with open(temppath + "/" + smallestfile.fe.get(ns + 'full-path')) as f:
         encrypted_file_bytes = f.read()
 
-    print hashes_template.format(os.path.basename(filename), version, checksum.encode('hex'), iv.encode('hex'), salt.encode('hex'), encrypted_file_bytes.encode('hex'))
+    print hashes_template.format(os.path.basename(filename), version, checksum.encode('hex'), iv.encode('hex'), salt.encode('hex'), encrypted_file_bytes.encode('hex'), len(encrypted_file_bytes))
 
     shutil.rmtree(temppath)
 

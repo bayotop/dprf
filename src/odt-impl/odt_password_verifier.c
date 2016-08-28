@@ -64,7 +64,7 @@ int verify(char *password, unsigned char *checksum_str, unsigned char *iv_str, u
     unsigned char *s = salt;
     str_to_uchar(&s, salt_str);
 
-    unsigned char encrypted_file[encrypted_file_len / 2];
+    unsigned char encrypted_file[encrypted_file_len];
     unsigned char *ef = encrypted_file;
     str_to_uchar(&ef, encrypted_file_str);
 

@@ -58,7 +58,7 @@ def _brute_force(q, counter, found, input_data):
                     input_data[3], #iv
                     input_data[4], #salt
                     input_data[5], #encrypted_file
-                    str(len(input_data[5]) / 2), #encrypted_file_length
+                    str(input_data[6]), #encrypted_file_length
                    ]) 
             q.task_done()
 
@@ -120,7 +120,7 @@ def _parse_verification_data(stream):
     if (data_format == "office" and len(data_array) == 8):  
         return data_array
 
-    if (data_format == "odt" and len(data_array) == 6):
+    if (data_format == "odt" and len(data_array) == 7):
         return data_array
 
     print "The input data is not supported."
