@@ -1,5 +1,5 @@
 \documentclass[11pt,oneside]{fithesis2}
-\usepackage[czech]{babel} % package for multilingual support
+\usepackage[english]{babel} % package for multilingual support
 \usepackage[utf8]{inputenc} % Windows OS encoding
 \usepackage[T1]{fontenc}
 \usepackage[resetfonts]{cmap}
@@ -22,7 +22,9 @@
 	rulecolor=\color{listingbg},
 	aboveskip=10pt
 }
+
 \renewcommand\lstlistingname{Code snippet}
+\renewcommand\figurename{Figure}
 
 \usepackage[unicode=true,      
             plainpages=false,
@@ -83,6 +85,107 @@ keyword1, keyword2, ...
 
 \section{Encryption} 
 
+The structure of encrypted document files is in detail described in the \textit{[MS-OFFCRYPTO]: Office Document Cryptography Structure specification} \cite{msoffcrypto}.
+
+This chapter aims to provide a necessary insight into the structure with respect to the discussed topics, highlight differences between various Office versions and discuss security implications that result from the specified protection measures.
+In order to provide confidentiality Office documents can be protected by a user-specified password using the following four methods:
+\begin{itemize}
+\setlength\itemsep{0.1em}
+\item{XOR obfuscation,}
+\item{40-bit RC4 encryption,}
+\item{Cryptographic Application Programming Interface (CAPI) or CryptoAPI,}
+\item{ECMA-376 document encryption, which can include one of the following approaches: }
+	\begin{itemize}
+	\setlength\itemsep{0.1em}
+	\item{standard encryption,}
+	\item{agile encryption,}
+	\item{extensible encryption.}
+	\end{itemize}
+\end{itemize}
+
+Only the last mentioned method will be further discussed as the other are not used by any modern Office versions (2007 and above) nor considered secure with the computing power currently available. The reason why they are included in all Office versions is backward compatibility with older formats \cite{msoffcrypto}.
+
+If standard encryption or agile encryption is used, the relevant information about cryptography used to encrypt the document is contained within a structure named \textit{EncryptionInfo}.
+
+\subsection{Standard Encryption}
+
+Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream (see Appendi \ref{ei_standardstream} for a detailed description).
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1\textwidth]{figures/ei_struct.pdf}
+	\caption{EncryptionInfo structure}
+	\label{keys_length}
+\end{figure}
+
+Standard encryption describes three algorithms:
+\begin{itemize}
+	\setlength\itemsep{0.1em}
+	\item{key derivation process,}
+	\item{verifier generation process,}
+	\item{password verification process.}
+\end{itemize}
+
+The key derivation process is derived from PKCS \#5: Password-Based Cryptography Version 2.0 as specified in RFC 2898 \cite{rfc2898} and the hashing algorithm used, specified in the \textit{EncryptionHeader.AlgIDHash} field, must be SHA-1. The exact steps to derive the encryption key are as follows:
+
+\begin{enumerate}
+\item{Calculate an initial password hash:}
+	\begin{itemize}
+		\item{$H_0 =\textit{SHA-1(salt + password)}$}
+	\end{itemize}
+\item{Iterate the hashing using the following approach: 
+	\begin{itemize}
+		\item{$H_n = \textit{SHA-1(iterator} + H_0)$}
+	\end{itemize}
+	Iterator is initally set to 0 and then incremented monotonically until 50,000 iterations have been performed.}
+\item{Calculate a final hash:
+	\begin{itemize}
+		\item{$H_{final} = \textit{SHA-1}(H_n + block)$}
+	\end{itemize}
+	Block is always $0x0000000$.}
+\item{The final hash is XORed separately into the first 20-bytes of two buffers containing the bytes $0x36$ and $0x5C$ respectively. The two results of these operations are concatenated and the first $x$ bytes are considered to be the derived key, where $x$ is the key length required by the specified encryption algorithm.}
+\end{enumerate}
+
+The key is eventually used to encrypt the given document using AES in ECB mode. In order to be able to verify the correctness of a password entered when attempting to decrypt the document a password verifier is generated and stored within the \textit{EncryptionInfo} stream. The verifier is 16-bytes long and stored encrypted using AES in ECB mode and a key derived by the aforementioned method. In addition an encrypted SHA-1 hash of the verifier is also stored. This information is used in the verification process as follows:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+\item{Derive a key using the aforementioned method from the given user-password.}
+\item{Decrypt the value stored in the \textit{EncryptedVerifier} field.}
+\item{Decrypt the value stored in the\textit{EncryptedVerifierHash} field.}
+\item{Calculate the SHA-1 hash value of the decrypted value calculated in step 2.}
+\item{Compare the results of step 3 and step 4. 
+	\begin{itemize}
+		\item{In case the two values match the password is correct.}
+	\end{itemize}}
+\end{enumerate}
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1\textwidth]{figures/standard_encryption_scheme.pdf}
+	\caption{Verification process as defined by ECMA-376 standard encryption}
+	\label{standard_encryption_scheme}
+\end{figure}
+
+\subsection{Agile Encryption}
+
+When agile encryption is used all information about the cryptography used to encrypt the document is stored in an XML element in the XmlEncryptionDescriptor field of the EncryptionInfo stream. This element must conform the XML schema namespace defined in \ref{ei_agilestream}. Agile encryption allows a wide-range of possible configurations and therefore is much more complex than standard encryption discussed in the previous section. The available algorithms depend on the algorithms that can be accessed through the APIs in the Windows operating system. Microsoft Office 2007 with Service Pack 2 and above support CNG (CryptoAPI: Next Generation). The following listing shows the settings and their default values, that are configurable and change the way how files are being encrypted:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{Set CNG cipher algorithm (default: AES).}
+	\item{Configure CNG cipher chaining mode (default: CBC).}
+	\item{Set CNG cipher key length (default: 128 bits).}
+	\item{Specify encryption compatibility (default: Use next generation format).}
+	\item{Set parameters for CNG context (see MSDN \cite{cng_functions}).}	
+	\item{Specify CNG hash algorithm (default: SHA1).}
+	\item{Set CNG password spin count (default: 100,000).}
+	\item{Specify CNG random number generator algorithm (default: RNG).}
+	\item{Specify CNG salt length (default: 16).}
+\end{itemize}
+
+A more detailed description of these settings can be found on the Microsoft Developer Network website\footnote{The settings and default values apply to Microsoft Office 2010 and 2013 and are identical.} \cite{plan_office_crypto}. 
+
 \section{Write Protection}
 
 \section{Digital Signatures}
@@ -136,11 +239,21 @@ keyword1, keyword2, ...
 \chapter{Conclusion}
 
 \begin{thebibliography}{}
-
+	\bibitem{msoffcrypto}Microsoft Corporation. 2015 \textit{[MS-OFFCRYPTO]: Office Document Cryptography Structure.} [ONLINE].
+Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/office/cc313071(v=office.12).aspx.} [Accessed 18 September 2016]
+	\bibitem{rfc2898} B. Kaliski. 2000 \textit{PKCS \#5: Password-Based Cryptography Specification Version 2.0.} [ONLINE].\\ Available at: \textit{http://www.ietf.org/rfc/rfc5246.txt} [Accessed 18 September 2016]
+	\bibitem{cng_functions}Microsoft Corporation. 2016 \textit{CNG Cryptographic Configuration Functions.} [ONLINE].
+Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/bb204774(v=VS.85).aspx.} [Accessed 18 September 2016]
+	\bibitem{plan_office_crypto}Microsoft Corporation. 2014 \textit{Plan cryptography and encryption settings for Office 2013.} [ONLINE].
+Available at: \\ \textit{https://technet.microsoft.com/en-us/library/cc179125.aspx.} [Accessed 18 September 2016]
 \end{thebibliography}
 
 \begin{appendix}
 	\chapter{Attachements}
+	\section{[MS-OFFCRYPTO] Structures and Schemas}\label{msoffcrypto_structs}
+	\subparagraph{EncryptionInfo Stream (Standard Encryption)}\label{ei_standardstream}
+
+	\subparagraph{EncryptionInfo Stream (Agile Encryption)}\label{ei_agilestream}.
 \end{appendix}
 \end{document}
 
