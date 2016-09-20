@@ -135,14 +135,14 @@ The key derivation process is derived from PKCS \#5: Password-Based Cryptography
 	\end{itemize}
 \item{Iterate the hashing using the following approach: 
 	\begin{itemize}
-		\item{$H_n = \textit{SHA-1(iterator} + H_0)$}
+		\item{$H_n = \textit{SHA-1(iterator} + H_{n-1})$}
 	\end{itemize}
-	Iterator is initally set to 0 and then incremented monotonically until 50,000 iterations have been performed.}
+	Variable $iterator$ is initally set to 0 and then incremented monotonically until 50,000 iterations have been performed.}
 \item{Calculate a final hash:
 	\begin{itemize}
 		\item{$H_{final} = \textit{SHA-1}(H_n + block)$}
 	\end{itemize}
-	Block is always $0x0000000$.}
+	Variable $block$ is always $0x0000000$.}
 \item{The final hash is XORed separately into the first 20-bytes of two buffers containing the bytes $0x36$ and $0x5C$ respectively. The two results of these operations are concatenated and the first $x$ bytes are considered to be the derived key, where $x$ is the key length required by the specified encryption algorithm.}
 \end{enumerate}
 
@@ -186,9 +186,62 @@ When agile encryption is used all information about the cryptography used to enc
 
 A more detailed description of these settings can be found on the Microsoft Developer Network website\footnote{The settings and default values apply to Microsoft Office 2010 and 2013 and are identical.} \cite{plan_office_crypto}. 
 
+The specification describes the steps necessary for deriving keys, generating initialization vectors and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. This key is later in this chapter referred to as the $intermediate key$. Appendix \ref{ei_agilestream} shows the schema specifying it's structure.
+
+For the sake of completeness, it's important to mention that this structure can be represented as a $CertificateKeyEncryptor$ structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account. 
+
+The key derivation process is similar to the method used in standard encryption and also derived from PKCS \#5 \cite{rfc2898}:
+
+\begin{enumerate}
+\item{Calculate an initial password hash:}
+	\begin{itemize}
+		\item{$H_0 =\textit{H(salt + password)}$}
+	\end{itemize}
+\item{Iterate the hashing using the following approach:}
+	\begin{itemize}
+		\item{$H_n = \textit{H(iterator} + H_{n-1})$}
+	\end{itemize}
+\item{Calculate a final hash:}
+	\begin{itemize}
+		\item{$H_{final} = \textit{H}(H_n + blockKey)$}
+	\end{itemize}
+\item{If the length of $H_{final}$ is smaller than the key length specified in the EncryptionInfo, the key must be padded by appending bytes with a value of $0x36$. If it is longer, it is truncated to the correct length.}
+\end{enumerate}
+
+Note that, unlike in standard encryption, $H()$ is not a fixed hashing algorithm and the $block$ variable depends on the purpose of the key that is being derived. Another difference is that $H_{final}$ is the final key.
+
+Iinitialization vectors are generated as shown in the following steps:
+\begin{enumerate}
+	\item{If a $blockKey$ is provided the IV is:}
+	\begin{itemize}
+		\item{$H(KeySalt + blockKey)$}
+	\end{itemize}
+	\item{If a $blockKey$ is not provided the IV is the $KeySalt$.}
+	\item{Depending on the length the IV is either, padded by appending bytes with the value of 0x36 or truncated, to $blockSize$ (corresponding to the encryption algorithm specified) bytes.}
+\end{enumerate}
+
+$KeySalt$ is specified in the document's EncryptionInfo and again, the $blockKey$ is determined by the IV's purpose.
+
+To understand how the password key encryptor is generated, it's neccessary to describe the meaning of some of it's elements:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{\textbf{encryptedVerifierHashInput} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79$.} 
+	\item{\textbf{encryptedVerifierHashValue} -- a hash of the plain-bytes of encryptedVerifierHashInput encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0xd7, 0xaa, 0x0f, 0x6d,$ $0x30, 0x61, 0x34, 0x4e$.}
+	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
+\end{itemize}
+
+In addition to confidentiality, agile encryption also provides structures that are used to verify integrity of encrypted files. These structures are stored in the EncryptionInfo’s DataIntegrity element. The process of generating this element is further described in \ref{data_integrity}. 
+
+As a deduction from the aforementioned steps a randomly generated key is used to encrypt the plain-text content of the documents. Unlike in standard encryption where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a CSPRNG (cryptographically secure pseudorandom number generator) an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
+
+\subsection{Extensible Encryption} 
+
+ECMA-376 documents can optionally use user-provided custom encryption modules. As this method is not commonly used it is not further analyzed or discussed.  
+
 \section{Write Protection}
 
-\section{Digital Signatures}
+\section{Digital Signatures}\label{data_integrity}
 
 \section{Conclusion}
 
@@ -209,6 +262,18 @@ A more detailed description of these settings can be found on the Microsoft Deve
 \chapter{Open Document Format for Office Applications}
 
 \section{Encryption}
+
+The encryption process as specified in Open Document Format for Office Applications (OpenDocument) \cite{odt_spec} has 3 stages:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+	\item{The user-supplied password is hashed.}
+	\item{For each file to be encrypted a separate key is generated using the hashed password and the PBKDF2 algorithm \cite{rfc2898}.}
+	\item{The files are encrypted using the keys created in step 2.}
+\end{enumerate}
+
+The exact algorithms and other necessary cryptographic parameters are defined in the Manifest file.
+
 
 \section{Digital Signatures}
 
@@ -246,6 +311,7 @@ Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/office/cc31307
 Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/bb204774(v=VS.85).aspx.} [Accessed 18 September 2016]
 	\bibitem{plan_office_crypto}Microsoft Corporation. 2014 \textit{Plan cryptography and encryption settings for Office 2013.} [ONLINE].
 Available at: \\ \textit{https://technet.microsoft.com/en-us/library/cc179125.aspx.} [Accessed 18 September 2016]
+	\bibitem{odt_spec}OASIS Standard. 2011 \textit{Open Document Format for Office Applications (OpenDocument) Version 1.2.} [ONLINE]. Available at: \textit{http://docs.oasis-open.org/office/v1.2/OpenDocument-v1.2.html.} [Accessed 19 September 2016]
 \end{thebibliography}
 
 \begin{appendix}
