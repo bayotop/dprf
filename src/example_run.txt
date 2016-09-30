@@ -1,0 +1,9 @@
+$ python2.7 client.py 127.0.0.1 5005
+received data: password.docx:$office$*2007*20*128*16*de40abf5f6227d08074a8f1579cd183a*189576350e7b9f3c8c74b65e755417c2*31c1ed3848d9f0b05d52b2249d357fc51eb39b62823699226284f20f960fd12f
+
+
+$ python2.7 server.py 1  ms-offcrypto-impl/password.docx
+Parsing ms-offcrypto-impl/password.docx ...
+Initializing brute-force engine (updates after every 1000 processed hashes) ...
+Connection address: ('127.0.0.1', 46969)
+Client connected: 1
