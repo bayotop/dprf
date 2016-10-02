@@ -15,25 +15,7 @@ from subprocess import call, check_output
 # Author: Martin Bajanik
 # Date: 30.09.2016
 
-def _init(stream):  
-    q = JoinableQueue()
-    found = Value('b', False)
-
-    t = Process(target=_generate, args=(q, found))
-    t.start()
-
-    t = Process(target=_handle_clients, args=(q, found, stream))
-    t.Daemon = True
-    t.start()
-    
-    # Make sure something is put on queue before q.join() is called. 
-    q.put('dummy')
-    q.join()
-
-    if (not found.value):
-        print "Password is not in brute-forced space."
-
-def _handle_clients(q, found, stream): 
+def _handle_clients(stream): 
     TCP_IP = '127.0.0.1'
     TCP_PORT = 5005
     BUFFER_SIZE = 1024  # Normally 1024, but we want fast response
@@ -52,17 +34,6 @@ def _handle_clients(q, found, stream):
             print "Client connected:", data
             conn.send(stream)  # echo
         conn.close()
-
-def _generate(q, found):   
-    #q.put('password') # Test scenario when password is generated
-    # repeat=1 => a-z
-    # repeat=2 => aa-zz
-    # repeat=8 => aaaaaaaa-zzzzzzzz   
-    for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=8)):
-         # TO DO: Find a better way to cancel generating after password is found
-        if (found.value):
-            break
-        q.put(s)
 
 def _get_verification_data(doc_type, filename):
     print 'Parsing ' + filename + ' ...'
@@ -98,5 +69,5 @@ if __name__ == '__main__':
     stream = _get_verification_data(args.document_type, args.filename)
 
     print 'Initializing brute-force engine (updates after every 1000 processed hashes) ...'
-    _init(stream)
+    _handle_clients(stream)
 
