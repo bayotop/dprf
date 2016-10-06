@@ -6,6 +6,7 @@ import time
 import argparse
 import textwrap
 import re
+import json
 from Queue import Empty
 from multiprocessing import Process, JoinableQueue, Value
 import string 
@@ -13,27 +14,59 @@ import itertools
 from subprocess import call, check_output
 
 # Author: Martin Bajanik
-# Date: 30.09.2016
+# Date: 06.10.2016
 
-def _handle_clients(stream): 
+global buffer_size
+buffer_size = 2048
+
+def _handle_clients(message): 
     TCP_IP = '127.0.0.1'
     TCP_PORT = 5005
-    BUFFER_SIZE = 1024  # Normally 1024, but we want fast response
 
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((TCP_IP, TCP_PORT))
     s.listen(1)
 
-
     while True:
         conn, addr = s.accept()
         print 'Connection address:', addr 
-        while 1:
-            data = conn.recv(BUFFER_SIZE)
-            if not data: break
-            print "Client connected:", data
-            conn.send(stream)  # echo
-        conn.close()
+        # Need to be sure we read all data that is comming (best practive)
+        chunks = []
+        while True:
+            chunk = conn.recv(buffer_size)
+            chunks.append(chunk)
+            if len(chunk) >= 40: # {"found": false, "correct_password": ""} or {"found": true, "correct_password": "x"}
+                break   # We probably have all data. We cannot be sure because client didn't close the connection as we need to send him an answer
+                        # This should be handled differently, but I am not quite sure what's the best practice
+
+        json_data = b''.join(chunks)
+
+        print "Received data:"
+        print json_data
+
+        data = json.loads(json_data)
+
+        if (data["found"]):
+            print "Correct password is: ", data["correct_password"]
+            conn.close()
+            break; # Actually we should keep running so we can inform other clients, that password was already found
+        else:
+            # Need to make sure whole message is sent (best practice)
+            totalsent = 0
+            while totalsent < len(message):
+                sent = conn.send(message[totalsent:])
+                if sent == 0:
+                    raise RuntimeError("Socket connection broke while sending data.")
+                totalsent = totalsent + sent
+        
+            conn.close()
+    s.close()
+
+def _prepare_data_for_transfer(stream):
+    data = {}
+    data['data'] = stream
+    data['password_range'] = 3
+    return json.dumps(data)
 
 def _get_verification_data(doc_type, filename):
     print 'Parsing ' + filename + ' ...'
@@ -67,7 +100,8 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     stream = _get_verification_data(args.document_type, args.filename)
+    message = _prepare_data_for_transfer(stream)
 
     print 'Initializing brute-force engine (updates after every 1000 processed hashes) ...'
-    _handle_clients(stream)
+    _handle_clients(message)
 

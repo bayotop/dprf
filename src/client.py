@@ -6,20 +6,23 @@ import time
 import argparse
 import textwrap
 import re
+import json
 from Queue import Empty
 from multiprocessing import Process, JoinableQueue, Value, Array
 from subprocess import call
 import string 
 import itertools
 from ctypes import c_char
+
 # Author: Martin Bajanik
-# Date: 30.09.2016
+# Date: 06.10.2016
 
 global tcp_ip
 global tcp_port
+global buffer_size
+buffer_size = 2048
 
 def _initialize_connection_to_server():
-    BUFFER_SIZE = 1024
     global tcp_ip
     global tcp_port
 
@@ -30,17 +33,18 @@ def _initialize_connection_to_server():
         print 'Connection was refused by the server.'
         exit(1);
 
-    s.send("1") # This should be something to identify this client. 
-    data = s.recv(BUFFER_SIZE)
+    _send_message(s, _prepare_message(False))
+    json_data = _receive_message(s)
     s.close()
 
-    print "received data:", data
+    print "Received data:"
+    print json_data
 
-    input_data = _parse_verification_data(data)
-    _init(input_data)
+    data = json.loads(json_data)
+    input_data = _parse_verification_data(data["data"])
+    _init(input_data, data["password_range"])
 
 def _send_result_to_server(found, correct_password = ""):
-    BUFFER_SIZE = 1024
     global tcp_ip
     global tcp_port
 
@@ -51,22 +55,54 @@ def _send_result_to_server(found, correct_password = ""):
         print 'Connection was refused by the server.'
         exit(1);
 
-    s.send(str(found) + ":" + correct_password)
-    data = s.recv(BUFFER_SIZE)
+    _send_message(s, _prepare_message(found, correct_password))
+    json_data = _receive_message(s)
     s.close()
 
+    print "Received data:"
+    print json_data
+
+    data = json.loads(json_data)
+
     if (not found):
-        input_data = _parse_verification_data(data)
-        _init(input_data)
+        input_data = _parse_verification_data(data["data"])
+        _init(input_data, data["password_range"])
 
+def _prepare_message(found, password = None):
+    data = {}
+    data['found'] = True if found else False
+    data['correct_password'] = password if password else '' 
+    return json.dumps(data)
 
-def _init(input_data):  
+def _send_message(socket, message):
+    # Need to make sure whole message is sent (best practice)
+    totalsent = 0
+    while totalsent < len(message):
+        sent = socket.send(message[totalsent:])
+        if sent == 0:
+            raise RuntimeError("Socket connection broke while sending data.")
+        totalsent = totalsent + sent
+
+def _receive_message(socket):
+    global buffer_size
+
+    # Need to make sure whole message is received
+    chunks = []
+    while True:
+        chunk = socket.recv(buffer_size)
+        if chunk == b'': 
+            break
+        chunks.append(chunk)
+
+    return b''.join(chunks)
+
+def _init(input_data, password_range):  
     q = JoinableQueue()
     counter = Value('i', 0)
     found = Value('b', False)
     password = Array(c_char, "default_password_allocation") # password should not be longer then this.
 
-    t = Process(target=_generate, args=(q, found))
+    t = Process(target=_generate, args=(q, password_range, found))
     t.start()
 
     for i in range(4):
@@ -139,12 +175,12 @@ def _brute_force(q, counter, found, input_data, password):
             
     return
 
-def _generate(q, found):   
+def _generate(q, password_range, found):   
     #q.put('password') # Test scenario when password is generated
     # repeat=1 => a-z
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz   
-    for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=8)):
+    for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
          # TO DO: Find a better way to cancel generating after password is found
         if (found.value):
             break
