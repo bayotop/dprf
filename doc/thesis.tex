@@ -98,7 +98,7 @@ In order to provide confidentiality Office documents can be protected by a user-
 	\begin{itemize}
 	\setlength\itemsep{0.1em}
 	\item{standard encryption,}
-	\item{agile encryption,}
+	\item{agile encryption and}
 	\item{extensible encryption.}
 	\end{itemize}
 \end{itemize}
@@ -109,7 +109,7 @@ If standard encryption or agile encryption is used, the relevant information abo
 
 \subsection{Standard Encryption}
 
-Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream (see Appendi \ref{ei_standardstream} for a detailed description).
+Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream (see Appendix \ref{ei_standardstream} for a detailed description).
 
 \begin{figure}[ht]
 	\centering
@@ -122,7 +122,7 @@ Standard encryption describes three algorithms:
 \begin{itemize}
 	\setlength\itemsep{0.1em}
 	\item{key derivation process,}
-	\item{verifier generation process,}
+	\item{verifier generation process and}
 	\item{password verification process.}
 \end{itemize}
 
@@ -137,7 +137,7 @@ The key derivation process is derived from PKCS \#5: Password-Based Cryptography
 	\begin{itemize}
 		\item{$H_n = \textit{SHA-1(iterator} + H_{n-1})$}
 	\end{itemize}
-	Variable $iterator$ is initally set to 0 and then incremented monotonically until 50,000 iterations have been performed.}
+	Variable \textit{iterator} is intially set to 0 and then incremented monotonically until 50,000 iterations have been performed.}
 \item{Calculate a final hash:
 	\begin{itemize}
 		\item{$H_{final} = \textit{SHA-1}(H_n + block)$}
@@ -169,7 +169,7 @@ The key is eventually used to encrypt the given document using AES in ECB mode. 
 
 \subsection{Agile Encryption}
 
-When agile encryption is used all information about the cryptography used to encrypt the document is stored in an XML element in the XmlEncryptionDescriptor field of the EncryptionInfo stream. This element must conform the XML schema namespace defined in \ref{ei_agilestream}. Agile encryption allows a wide-range of possible configurations and therefore is much more complex than standard encryption discussed in the previous section. The available algorithms depend on the algorithms that can be accessed through the APIs in the Windows operating system. Microsoft Office 2007 with Service Pack 2 and above support CNG (CryptoAPI: Next Generation). The following listing shows the settings and their default values, that are configurable and change the way how files are being encrypted:
+When agile encryption is used all information about the cryptography used to encrypt the document is stored in an XML element in the \textit{XmlEncryptionDescriptor} field of the \textit{EncryptionInfo} stream. This element must conform the XML schema namespace defined in \ref{ei_agilestream}. Agile encryption allows a wide-range of possible configurations and therefore is much more complex than standard encryption discussed in the previous section. The available algorithms depend on the algorithms that can be accessed through the APIs in the Windows operating system. Microsoft Office 2007 with Service Pack 2 and above support CNG (CryptoAPI: Next Generation). The following listing shows the settings and their default values, which are configurable and change the way how files are being encrypted:
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
@@ -186,9 +186,9 @@ When agile encryption is used all information about the cryptography used to enc
 
 A more detailed description of these settings can be found on the Microsoft Developer Network website\footnote{The settings and default values apply to Microsoft Office 2010 and 2013 and are identical.} \cite{plan_office_crypto}. 
 
-The specification describes the steps necessary for deriving keys, generating initialization vectors and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. This key is later in this chapter referred to as the $intermediate key$. Appendix \ref{ei_agilestream} shows the schema specifying it's structure.
+The specification describes the steps necessary for deriving keys, generating initialization vectors and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. This key is later in this chapter referred to as the intermediate key. Appendix \ref{ei_agilestream} shows the schema specifying its structure.
 
-For the sake of completeness, it's important to mention that this structure can be represented as a $CertificateKeyEncryptor$ structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account. 
+For the sake of completeness, it's important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account. 
 
 The key derivation process is similar to the method used in standard encryption and also derived from PKCS \#5 \cite{rfc2898}:
 
@@ -205,33 +205,33 @@ The key derivation process is similar to the method used in standard encryption 
 	\begin{itemize}
 		\item{$H_{final} = \textit{H}(H_n + blockKey)$}
 	\end{itemize}
-\item{If the length of $H_{final}$ is smaller than the key length specified in the EncryptionInfo, the key must be padded by appending bytes with a value of $0x36$. If it is longer, it is truncated to the correct length.}
+\item{If the length of $H_{final}$ is smaller than the key length specified in the \textit{EncryptionInfo}, the key must be padded by appending bytes with a value of $0x36$. If it is longer, it is truncated to the correct length.}
 \end{enumerate}
 
 Note that, unlike in standard encryption, $H()$ is not a fixed hashing algorithm and the $block$ variable depends on the purpose of the key that is being derived. Another difference is that $H_{final}$ is the final key.
 
-Iinitialization vectors are generated as shown in the following steps:
+Initialization vectors are generated as shown in the following steps:
 \begin{enumerate}
-	\item{If a $blockKey$ is provided the IV is:}
+	\item{If a \textit{blockKey} is provided the IV is:}
 	\begin{itemize}
 		\item{$H(KeySalt + blockKey)$}
 	\end{itemize}
-	\item{If a $blockKey$ is not provided the IV is the $KeySalt$.}
-	\item{Depending on the length the IV is either, padded by appending bytes with the value of 0x36 or truncated, to $blockSize$ (corresponding to the encryption algorithm specified) bytes.}
+	\item{If a \textit{blockKey} is not provided the IV is the \textit{KeySalt}.}
+	\item{Depending on the length the IV is either, padded by appending bytes with the value of $0x36$ or truncated, to \textit{blockSize} (corresponding to the encryption algorithm specified) bytes.}
 \end{enumerate}
 
-$KeySalt$ is specified in the document's EncryptionInfo and again, the $blockKey$ is determined by the IV's purpose.
+\textit{KeySalt} is specified in the document's \textit{EncryptionInfo} and again, the \textit{blockKey} is determined by the IV's purpose.
 
-To understand how the password key encryptor is generated, it's neccessary to describe the meaning of some of it's elements:
+To understand how the password key encryptor is generated, it's necessary to describe the meaning of some of its elements:
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
-	\item{\textbf{encryptedVerifierHashInput} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79$.} 
-	\item{\textbf{encryptedVerifierHashValue} -- a hash of the plain-bytes of encryptedVerifierHashInput encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0xd7, 0xaa, 0x0f, 0x6d,$ $0x30, 0x61, 0x34, 0x4e$.}
-	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed $blockKey$: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
+	\item{\textbf{encryptedVerifierHashInput} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79$.} 
+	\item{\textbf{encryptedVerifierHashValue} -- a hash of the plain-bytes of \textit{encryptedVerifierHashInput} encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0xd7, 0xaa, 0x0f, 0x6d,$ $0x30, 0x61, 0x34, 0x4e$.}
+	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
 \end{itemize}
 
-In addition to confidentiality, agile encryption also provides structures that are used to verify integrity of encrypted files. These structures are stored in the EncryptionInfo’s DataIntegrity element. The process of generating this element is further described in \ref{data_integrity}. 
+In addition to confidentiality, agile encryption also provides structures that are used to verify integrity of encrypted files. These structures are stored in the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this element is further described in \ref{data_integrity}. 
 
 As a deduction from the aforementioned steps a randomly generated key is used to encrypt the plain-text content of the documents. Unlike in standard encryption where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a CSPRNG (cryptographically secure pseudorandom number generator) an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
 
@@ -263,7 +263,7 @@ ECMA-376 documents can optionally use user-provided custom encryption modules. A
 
 \section{Encryption}
 
-The encryption process as specified in Open Document Format for Office Applications (OpenDocument) \cite{odt_spec} has 3 stages:
+The encryption process as specified in Open Document Format for Office Applications (\textit{OpenDocument}) \cite{odt_spec} has 3 stages:
 
 \begin{enumerate}
 \setlength\itemsep{0.1em}
