@@ -12,7 +12,6 @@
         OpenDocument - v1.2 with AES-256 in CBC mode
 
     Known Issues:
-        - KeyboardInterrupt handling (it's problematic because of brute_force.py)
         - Implement status checking in separate thread, to ask the server if any other client
             already found the correct password.
 """
@@ -21,14 +20,16 @@ import argparse
 from ctypes import c_char
 import json
 import re
+import signal
 import socket
+import sys
 import textwrap
 
 # Own modules
 import brute_force
 
 __author__ = "Martin Bajanik"
-__date__   = "06.10.2016"
+__date__   = "13.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
@@ -74,9 +75,14 @@ def recvall(connection):
                 return b"".join(chunks)
 
 def init(tcp_ip, tcp_port, input_data, password_range):
-    # Here is custom brute-forcing core called. In this case it is brute_force.py.
-    # In general can be anything hashcat, john etc. 
+    # Here is custom brute-forcing core called. In this case it is brute_force.py
+    # In general can be anything hashcat, john etc.
+    if (not input_data):
+        print "Empty data received from server."
+        return
+
     result = brute_force.init(input_data, password_range);
+
     results = result.split(':')
 
     print "Finished brute-force attack. Sending the results to server."

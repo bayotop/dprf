@@ -21,18 +21,23 @@
 import argparse
 import json
 import socket
+import sys
 from subprocess import check_output
 import textwrap
 
 __author__ = "Martin Bajanik"
-__date__   = "06.10.2016"
+__date__   = "13.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
 def run_server(tcp_ip, tcp_port, message): 
-    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server.bind((tcp_ip, tcp_port))
-    server.listen(5)
+    try:
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((tcp_ip, tcp_port))
+        server.listen(5)
+    except socket.error as ex:
+        print "Error opening socket:", ex
+        return
 
     while True:
         try:
@@ -79,16 +84,15 @@ def recvall(connection):
             else:
                 return b''.join(chunks)
 
-def prepare_data_for_transfer(stream):
+def prepare_data_for_transfer(stream, passwordrange):
     data = {}
     data["data"] = stream
-    data["password_range"] = 2
+    data["password_range"] = passwordrange if passwordrange else 8
     return json.dumps(data)
 
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + " ..."
- 
-    # TO DO: Refactor this to properly include this python scripts instead of using check_output
+
     if (doc_type == '1'):
         return check_output(["python", "ms-offcrypto-impl/office2john.py", filename]).strip()
 
@@ -114,12 +118,17 @@ if __name__ == "__main__":
 
     parser.add_argument("document_type", help="type of the protected document (MS Office / OpenDocument)")
     parser.add_argument("filename", help="the protected document")
+    parser.add_argument("-pr", "--passwordrange", type=int, help="password range to brute-force (i.e., 2 -> aa..zz)")
     parser.add_argument("tcp_ip", help="IP address to which clients should connect")
     parser.add_argument("tcp_port", help="port to which clients should connect")
     args = parser.parse_args()
 
     stream = get_verification_data(args.document_type, args.filename)
-    message = prepare_data_for_transfer(stream)
+
+    if (not stream):
+        sys.exit(0)
+
+    message = prepare_data_for_transfer(stream, args.passwordrange)
 
     print "Running server and expecting clients to ask for data ..."
     run_server(args.tcp_ip, int(args.tcp_port), message)

@@ -11,9 +11,6 @@
         Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
         OpenDocument - v1.2 with AES-256 in CBC mode
 
-    Known Issues:
-        - KeyboardInterrupt handling (multiprocessing ...)
-
     More to implement:
         - Support for more formats (Office 2015, PDF, older ODT versions, ...)
 """
@@ -25,103 +22,135 @@ from multiprocessing import Process, JoinableQueue, Value, Array
 from Queue import Empty
 import re
 import string
-from subprocess import call, check_output 
+import sys
+from subprocess import Popen, check_output 
 import time
 import textwrap
 
 __author__ = "Martin Bajanik"
-__date__   = "06.10.2016"
+__date__   = "13.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
 def init(stream, password_range): 
-    input_data = parse_verification_data(stream)
-    print "Initializing brute-force. Updates after each 1000 hashes ..."
+    try:
+        input_data = parse_verification_data(stream)
+        print "Initializing brute-force. Updates after each 1000 hashes ..."
 
-    q = JoinableQueue()
-    counter = Value('i', 0)
-    found = Value('b', False)
-    password = Array(c_char, "default_password_allocation") # Password should not be longer then this. Need a better solution.
+        q = JoinableQueue()
+        counter = Value('i', 0)
+        found = Value('b', False)
+        password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
 
-    t = Process(target=_generate, args=(q, password_range, found))
-    t.start()
-
-    for i in range(4):
-        t = Process(target=_brute_force, args=(q, counter, found, input_data, password))
-        t.Daemon = True
+        t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
+        t.daemon = True
         t.start()
-    
-    # Make sure something is put on queue before q.join() is called.
-    q.put("_dummy")
-    q.join()
+
+        for i in range(4):
+            t = Process(target=_brute_force, name="Brute-Force Core " + str(i), args=(q, counter, found, input_data, password))
+            t.daemon = True
+            t.start()
+
+        # TO DO: Make sure something is put on queue before q.join() is called.
+        q.put("_dummy")
+        q.join()
+    except KeyboardInterrupt:
+        print "The brute-forcing was terminated by user..."
+        sys.exit(0)
 
     return str(found.value) + ':' + password.value
 
 def _brute_force(q, counter, found, input_data, password):
     start = time.time()
-    while True:
-        try:
-            pwd = q.get(True, 1)
-        except Empty:
-            return 
-        else:
-            if (input_data[0] == "office"):
-                result = call(["ms-offcrypto-impl/./msoffcrypto", pwd, 
-                    input_data[5], # salt
-                    input_data[4], # salt_length
-                    input_data[6], # encrypted_verifier
-                    str(len(input_data[6]) / 2), # encrypted_verifier_length
-                    input_data[7], # encrypted_verifier_hash
-                    str(len(input_data[7]) / 2), # encrypted_verifier_hash_length
-                    str(input_data[3]), # aes_key_length
-                    str(input_data[2]), # verifier_hash_size
-                    ]) 
-            if (input_data[0] == "odt"):
-                result = call(["odt-impl/./odt", pwd, 
-                    input_data[2], #checksum
-                    input_data[3], #iv
-                    input_data[4], #salt
-                    input_data[5], #encrypted_file
-                    str(input_data[6]), #encrypted_file_length
-                   ]) 
-            q.task_done()
+    try:
+        while True:
+            try:
+                pwd = q.get(True, 1)
+            except Empty:
+                return 
+            else:
+                if (input_data[0] == "office"):
+                    p = _call_msoffcrypto_core(pwd, input_data)
+                if (input_data[0] == "odt"):
+                    p = _call_odt_core(pwd, input_data)
+                try: 
+                    result = p.wait()
+                except KeyboardInterrupt:
+                    try:
+                        p.terminate()
+                    except OSError:
+                        pass
+                    finally:
+                        sys.exit(0)
+                q.task_done()
 
-            if (result):
-                with found.get_lock():
-                    found.value = True
-                    password.value = pwd
-                    print("Correct password is '" + pwd + "'")
-                    # Force q.join() to be triggered
-                    # TO DO: find a nicer way 
-                    while q.qsize != 0:
-                        try:
-                            q.get(True, 1)
-                            q.task_done()
-                        except Empty:
-                            return 
+                if (result):
+                    with found.get_lock():
+                        found.value = True
+                        password.value = pwd
+                        print("Correct password is '" + pwd + "'")
+                        # Force q.join() to be triggered
+                        # TO DO: find a nicer way 
+                        while q.qsize() != 0:
+                            try:
+                                q.get(True, 1)
+                                q.task_done()
+                            except Empty:
+                                return
+                        return
 
-            with counter.get_lock():
-                counter.value += 1
+                with counter.get_lock():
+                    counter.value += 1
 
-            if (counter.value != 0 and (counter.value % 1000 == 0)):
-                actual = time.time()
-                speed = 1 / (actual - start) * counter.value
-                print "Running time: " + str(actual - start) + " & tried since: " + str(counter.value) + " passes"
-                print "Speed: " + str(speed) + " H/sec"
-                print "Queue size: " + str(q.qsize())
-            
-    return 
+                if (counter.value != 0 and (counter.value % 1000 == 0)):
+                    actual = time.time()
+                    speed = 1 / (actual - start) * counter.value
+                    print "Running time: " + str(actual - start) + " & tried since: " + str(counter.value) + " passes"
+                    print "Speed: " + str(speed) + " H/sec"
+                    print "Queue size: " + str(q.qsize())
+    except KeyboardInterrupt:
+        sys.exit(0)
 
-def _generate(q, password_range, found):   
-    #q.put('password') # Test scenario when password is generated
+    return
+
+def _call_msoffcrypto_core(pwd, input_data):
+    return Popen(["ms-offcrypto-impl/./msoffcrypto", pwd, 
+        input_data[5], # salt
+        input_data[4], # salt_length
+        input_data[6], # encrypted_verifier
+        str(len(input_data[6]) / 2), # encrypted_verifier_length
+        input_data[7], # encrypted_verifier_hash
+        str(len(input_data[7]) / 2), # encrypted_verifier_hash_length
+        str(input_data[3]), # aes_key_length
+        str(input_data[2]), # verifier_hash_size
+        ])
+
+def _call_odt_core(pwd, input_data):
+    return Popen(["odt-impl/./odt", pwd, 
+        input_data[2], #checksum
+        input_data[3], #iv
+        input_data[4], #salt
+        input_data[5], #encrypted_file
+        str(input_data[6]), #encrypted_file_length
+        ]) 
+
+def _generate(q, password_range, found): 
     # repeat=1 => a-z
     # repeat=2 => aa-zz
-    # repeat=8 => aaaaaaaa-zzzzzzzz   
-    for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
-         # TO DO: Find a better way to cancel generating after password is found
-        if (found.value):
-            break
-        q.put(s)
+    # repeat=8 => aaaaaaaa-zzzzzzzz
+    try:
+        #counter = 0 
+        for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
+        # TO DO: Find a better way to cancel generating after password is found
+            if (found.value):
+                break
+        # Test scenario when password is generated
+            #if (counter == 7):
+            #   q.put('password')
+            #counter += 1
+            q.put(s)
+    except:
+        sys.exit(0) 
 
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + " ..."
@@ -170,12 +199,18 @@ if __name__ == "__main__":
 
     parser.add_argument("document_type", help="type of the protected document (MS Office / OpenDocument)")
     parser.add_argument("filename", help="the protected document")
+    parser.add_argument("-pr", "--passwordrange", type=int, help="password range to brute-force (i.e., 2 -> aa..zz)")
     args = parser.parse_args()
 
     stream = get_verification_data(args.document_type, args.filename)
-    result = init(stream, 8)
 
+    if (not stream):
+        sys.exit(0)
+
+
+
+    result = init(stream, args.passwordrange if args.passwordrange else 8)
     results = result.split(':')
 
-    if (int(results[0])):
+    if (not int(results[0])):
         print "Password is not in brute-forced space."
