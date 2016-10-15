@@ -24,8 +24,10 @@
 #   - Slightly change format of output data.
 #   - Skip meta-data parsing, as it won't work for PDFs created using PS3 and I
 #       do not need them.
-#   - Skip processing of UE, OE - not specified in PDF specification and again 
-#       PDF files created using PS3 do not have them.
+#   - Skip processing of UE, OE - they were added in revision 5. 
+#       PDFs v1.7 with security handler of revision 4 are not parsable as 
+#       missing UE and OE keys result in an IndexError. They're not needed
+#       for password verification, so I do not need them.
 #   - Add * between $pdf$ and version number in output.
 
 import re
