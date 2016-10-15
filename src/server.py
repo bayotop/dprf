@@ -99,6 +99,9 @@ def get_verification_data(doc_type, filename):
     if (doc_type == '2'):
         return check_output(["python", "odt-impl/odt2hashes.py", "-e", filename]).strip()
 
+    if (doc_type == '3'):
+        return check_output(["python", "pdf-impl/pdf2john.py", filename]).strip()
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="DDPBFS",

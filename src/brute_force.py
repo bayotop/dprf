@@ -64,6 +64,11 @@ def _brute_force(q, counter, found, input_data, password):
     start = time.time()
     try:
         while True:
+            # No point in trying when password was found. Force q.join() so we can send password to server.
+            if (found.value):
+                _force_queue_join(q);
+                return
+
             try:
                 pwd = q.get(True, 1)
             except Empty:
@@ -73,6 +78,8 @@ def _brute_force(q, counter, found, input_data, password):
                     p = _call_msoffcrypto_core(pwd, input_data)
                 if (input_data[0] == "odt"):
                     p = _call_odt_core(pwd, input_data)
+                if (input_data[0] == "pdf"):
+                    p = _call_pdf_core(pwd, input_data)
                 try: 
                     result = p.wait()
                 except KeyboardInterrupt:
@@ -89,15 +96,10 @@ def _brute_force(q, counter, found, input_data, password):
                         found.value = True
                         password.value = pwd
                         print("Correct password is '" + pwd + "'")
-                        # Force q.join() to be triggered
-                        # TO DO: find a nicer way 
-                        while q.qsize() != 0:
-                            try:
-                                q.get(True, 1)
-                                q.task_done()
-                            except Empty:
-                                return
-                        return
+                    # Force q.join() to be triggered
+                    # TO DO: find a nicer way 
+                    _force_queue_join(q);
+                    return
 
                 with counter.get_lock():
                     counter.value += 1
@@ -127,11 +129,26 @@ def _call_msoffcrypto_core(pwd, input_data):
 
 def _call_odt_core(pwd, input_data):
     return Popen(["odt-impl/./odt", pwd, 
-        input_data[2], #checksum
-        input_data[3], #iv
-        input_data[4], #salt
-        input_data[5], #encrypted_file
-        str(input_data[6]), #encrypted_file_length
+        input_data[2], # checksum
+        input_data[3], # iv
+        input_data[4], # salt
+        input_data[5], # encrypted_file
+        str(input_data[6]), # encrypted_file_length
+        ]) 
+
+def _call_pdf_core(pwd, input_data):
+    return Popen(["pdf-impl/./pdf", pwd, 
+        input_data[1], # version
+        input_data[2], # revision
+        input_data[3], # length
+        input_data[4], # p
+        input_data[5], # meta_encrypted 
+        input_data[6], # id_length 
+        str(input_data[7]), # id
+        input_data[8], # u_length 
+        str(input_data[9]), # u 
+        input_data[10], # o_length
+        str(input_data[11]) # o
         ]) 
 
 def _generate(q, password_range, found): 
@@ -139,18 +156,30 @@ def _generate(q, password_range, found):
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
     try:
-        #counter = 0 
+        counter = 0 
         for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
-        # TO DO: Find a better way to cancel generating after password is found
+            # Make sure we can easily force q.join when password is found.
+            while (q.qsize() > 5000):
+                time.sleep(2);
+            # TO DO: Find a better way to cancel generating after password is found
             if (found.value):
-                break
-        # Test scenario when password is generated
-            #if (counter == 7):
-            #   q.put('password')
-            #counter += 1
+                _force_queue_join(q);
+                return
+            # Test scenario when password is generated
+            if (counter == 3656):
+               q.put('user')
+            counter += 1
             q.put(s)
     except:
-        sys.exit(0) 
+        sys.exit(0)
+
+def _force_queue_join(q):
+    while q.qsize() != 0:
+        try:
+            q.get(True, 1)
+            q.task_done()
+        except Empty:
+            return 
 
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + " ..."
@@ -161,6 +190,9 @@ def get_verification_data(doc_type, filename):
 
     if (doc_type == '2'):
         return check_output(["python", "odt-impl/odt2hashes.py", "-e", filename]).strip()
+
+    if (doc_type == '3'):
+        return check_output(["python", "pdf-impl/pdf2john.py", filename]).strip()
 
 def parse_verification_data(stream):
     print "Preparing verification data ..."
@@ -177,6 +209,10 @@ def parse_verification_data(stream):
     if (data_format == "odt" and len(data_array) == 7):
         return data_array
 
+    print len(data_array)
+    if (data_format == "pdf" and len(data_array) == 12):
+        return data_array
+
     print "The input data is not supported."
     exit(1); 
 
@@ -191,13 +227,15 @@ if __name__ == "__main__":
             Document types:
                 1: Microsoft Office
                 2: OpenDocument
+                3: Portable Document Format (PDF)
 
             Actually supported formats:
                 Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
                 OpenDocument - v1.2 with AES-256 in CBC mode
+                Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
             """))
 
-    parser.add_argument("document_type", help="type of the protected document (MS Office / OpenDocument)")
+    parser.add_argument("document_type", help="type of the protected document")
     parser.add_argument("filename", help="the protected document")
     parser.add_argument("-pr", "--passwordrange", type=int, help="password range to brute-force (i.e., 2 -> aa..zz)")
     args = parser.parse_args()
@@ -206,8 +244,6 @@ if __name__ == "__main__":
 
     if (not stream):
         sys.exit(0)
-
-
 
     result = init(stream, args.passwordrange if args.passwordrange else 8)
     results = result.split(':')

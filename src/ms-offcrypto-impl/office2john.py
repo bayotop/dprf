@@ -104,6 +104,7 @@ __version__ = '0.23'
 #                        (https://bitbucket.org/decalage/olefileio_pl/issue/7)
 #                      - added close method to OleFileIO (fixed issue #2)
 # 2012-07-25 v0.23 PL: - added support for file-like objects (patch by mete0r_kr)
+# 2016-10-15           - line 1814, changed encryptedVerifierHash size from 20 to 32 (Martin Bajanik).
 
 
 #-----------------------------------------------------------------------------
@@ -1810,7 +1811,8 @@ def process_new_office(filename):
         salt = stm.read(saltSize)
         encryptedVerifier = stm.read(16)
         verifierHashSize = unpack("<I", stm.read(4))[0]
-        encryptedVerifierHash = stm.read(32) # bayotop: verifierHashSize == 20, encryptedVerifierHash == 32 (AES). 
+        encryptedVerifierHash = stm.read(32) # verifierHashSize == 20, encryptedVerifierHash == 32 (AES). However, the 20 bytes are sufficient to 
+                                             # verify the password's authenticity. ms_offcrypto_password_verifier.c expects 32 bytes. 
 
         sys.stdout.write("%s:$office$*%d*%d*%d*%d*%s*%s*%s\n" % \
             (os.path.basename(filename), 2007, verifierHashSize,

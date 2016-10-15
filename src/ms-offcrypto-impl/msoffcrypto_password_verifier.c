@@ -1,5 +1,4 @@
 #include <iconv.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/bn.h>
@@ -30,7 +29,6 @@ int str_to_uchar(unsigned char **output, unsigned char *str);
 
 
 int main(int argc, char *argv[]) {
-
     if (argc != 10 && argc != 11) {
          fprintf(stderr, "Usage: %s password salt salt_length encrypted_verifier encrypted_verifier_length \
             encrypted_verifier_hash encrypted_verifier_hash_length aes_key_length verifier_hash_size [-v]\n", argv[0]);
@@ -88,7 +86,7 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     }
     verbose_print("'\n");
 
-    // Initial hasing ( H0 = SHA1(SALT + PASSWORD) -> Hn = SHA1(i + (Hn - 1)) (50000x) -> HFinal = SHA1(H50000 + BLOCK) )
+    // Initial hashing ( H0 = SHA1(SALT + PASSWORD) -> Hn = SHA1(i + (Hn - 1)) (50000x) -> HFinal = SHA1(H50000 + BLOCK) )
     size_t length = input_length_utf16;
 
     unsigned char *initial_input = calloc(salt_len + length, sizeof(char));
