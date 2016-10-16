@@ -16,16 +16,17 @@
     More to implement:
         - Implement status checking in separate thread, to ask the server if any other client
             already found the correct password.
+        - Refactor connect_to_server -> init -> connect_to_server flow. 
 """
 
 import argparse
 from ctypes import c_char
 import json
 import re
-import signal
 import socket
 import sys
 import textwrap
+import uuid
 
 # Own modules
 import brute_force
@@ -39,17 +40,20 @@ def connect_to_server(tcp_ip, tcp_port, found, password = None):
     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         client.connect((tcp_ip, tcp_port))
-    except: 
+    
+        client.sendall(prepare_message(found, password))
+        client.shutdown(socket.SHUT_WR)
+        if (not found):
+            json_data = recvall(client)
+            if (not json_data):
+                print "No data received from server. Exiting."
+                return
+            print "Received data. Initializing brute-force..."
+            data = json.loads(json_data)
+        client.close()
+    except socket.error: 
         print "Connection was refused by the server."
         exit(1)
-
-    client.sendall(prepare_message(found, password))
-    client.shutdown(socket.SHUT_WR)
-    if (not found):
-        json_data = recvall(client)
-        print "Received data. Initializing brute-force..."
-        data = json.loads(json_data)
-    client.close()
 
     if (not found):
         init(tcp_ip, tcp_port, data["data"], data["passwords"])
@@ -58,6 +62,7 @@ def prepare_message(found, password):
     data = {}
     data["found"] = True if found else False
     data["correct_password"] = password if password else ""
+    data["id"] = identifier
     return json.dumps(data)
 
 def recvall(connection):
@@ -118,5 +123,8 @@ if __name__ == "__main__":
     parser.add_argument("tcp_ip", help="IP of the synchronization server")
     parser.add_argument("tcp_port", help="port on which synchronization server is listening")
     args = parser.parse_args()
+
+    global identifier
+    identifier = str(uuid.uuid4())
 
     connect_to_server(args.tcp_ip, int(args.tcp_port), False)

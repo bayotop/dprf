@@ -16,6 +16,7 @@
     More to implement:
         - Support for more formats (Office 2015, older ODT versions, ...)
         - Implement owner password support for PDF
+        - Needs refactoring.
 """
 
 import argparse
@@ -222,7 +223,6 @@ def _force_queue_join(q):
             q.get(True, 1)
             q.task_done()
         except Empty:
-            print "Queue is empty..."
             return 
 
 def get_verification_data(doc_type, filename):
@@ -253,7 +253,6 @@ def parse_verification_data(stream):
     if (data_format == "odt" and len(data_array) == 7):
         return data_array
 
-    print len(data_array)
     if (data_format == "pdf" and len(data_array) == 12):
         return data_array
 

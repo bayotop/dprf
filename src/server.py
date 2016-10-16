@@ -14,13 +14,20 @@
         Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
     More to implement:
-        - Implement state of clients. The server should know how many clients are connected
-            how many password are already processed, estimate remaining time etc.
-        - Implement state reporting: number of clients, number of processed passwords, 
-            estimated time left, etc.
+        - Needs refactoring.
+        - The client state is refreshed every time a new message is received. The problem is that
+          if there are no more messages, the state won't get updated and the server is stuck.
+        - If there is atleast one working client, any client unresponsive more then 20 minutes 
+          will be treated as unresponsive. Couldn't find a nice way to synchronize clients, between
+          processes / threads, therefore this solution for now.
+        - Create a logger, this print shit is ridiculous.
+        - Some kinf of hearth-beat would be useful between server - client. Could solve the client
+          sync problem, too.
+        - Curses (just nice to have).
 """
 
 import argparse
+from datetime import datetime, timedelta
 import itertools
 import json
 from multiprocessing import Process, JoinableQueue, Value, Array
@@ -37,20 +44,28 @@ __date__   = "13.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
-global payload_size
-payload_size = 20000 # TO DO: Anything larger causes brute_force.py to not terminate correctly on keyboard interrupt. 
+class Client:
+    def __init__(self, id, last_activity):
+        self.id = id
+        self.last_activity = last_activity
+
+    def __str__(self):
+        return "ID: " + self.id + "Last activity" + str(self.last_activity)
+
+    def __eq__(self, other):
+        return self.id == other.id
+
+    def isActive(self):
+        return self.last_activity > datetime.now() - timedelta(minutes=20)
+
 
 def run_server(tcp_ip, tcp_port, stream, password_range):
     q = JoinableQueue()
     found = Value('b', False)
 
-    t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
+    t = Process(target=generate, name="Password Generator", args=(q, password_range, found))
     t.daemon = True
     t.start()
-
-    # Make sure we have enough passwords precomputed
-    while (q.qsize() < payload_size):
-        time.sleep(2)
 
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -60,12 +75,21 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
         print "Error opening socket:", ex
         return
 
-    # Number of total passwords sent to clients.
+    start_time = time.time()
+    global counter
     counter = 0
 
     while True:
-        print "Everything ready. Waiting for new client..."
+        remove_inactive_clients()
+        print "Everything ready."
+        print "Number of clients: " + str(len(clients))
+        print "Estimated speed: " + str(1 / (time.time() - start_time) * counter) + " H/sec"
         message = prepare_data_for_transfer(q, stream)
+        # There are no more passwords to send, but he have to wait for all clients to finish. 
+        if (not message and not clients):
+            print "Password is not in brute-forced space."
+            server.close()
+            return
         try:
             client, address = server.accept()
         except KeyboardInterrupt:
@@ -73,29 +97,48 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
             server.close()
             return
 
-        if (handle_connection(client, address, message)):
+        result, counter = handle_connection(client, address, message)
+        if (result):
+            with found.get_lock():
+                found.value = True
             server.close()
-            counter += payload_size
-            break
+            return
 
 def handle_connection(client, address, message):
+    global counter
     found = False
 
-    print "A client connected from address:", address 
+    print "A client connected from address:", address
     json_data = recvall(client)
     client.shutdown(socket.SHUT_RD)
-    print "Received data: ", json_data
     data = json.loads(json_data)
+    client_identifier = data["id"]
 
+    # Only handle existing connections, if there are no more passwords to try.
+    if (not client_identifier in (x.id for x in clients)):
+        if (message):
+            clients.append(Client(client_identifier, datetime.now()))
+        else:
+            client.close()
+            return False, counter
+    # We increase the count of processed pasword, as a client is contacting us repeatedly.
+    else:
+        counter += payload_size
+
+    # Check the message if the password was found. If not, send new data in case there are any.
     if (data["found"]):
         print "Correct password is: ", data["correct_password"]
         found = True
     else:
-        client.sendall(message)
-        print "Sent new instruction to: ", address
-    
+        if (message):
+            client.sendall(message)
+            print "Sent new instruction to: ", address
+        else:
+            clients.remove([c for c in clients if c.id == client_identifier][0])
+
+    # Any both cases, close the connection. Client will only stop working, in case he gets no response. 
     client.close()
-    return found
+    return found, counter
 
 def recvall(connection):
     # Need to be sure we read all data that is comming (best practice)
@@ -111,41 +154,43 @@ def recvall(connection):
             else:
                 return b''.join(chunks)
 
-def _generate(q, password_range, found): 
+def generate(q, password_range, found): 
     # repeat=1 => a-z
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
-    #counter = 0
+    #counter_test = 0
     try:
         for x in range(1, password_range + 1 if password_range else 9): # default is 1..8
             for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=x)):
                 # Data has to be ready all the time. However, not to much, so we can easily quit and dont flood memory.
                 while (q.qsize() > payload_size * 2):
                     time.sleep(2)
-                # TO DO: Find a better way to cancel generating after password is found
-                if (found.value):
-                    _force_queue_join(q)
-                    return
                 # Test scenario when password is generated
-                #if (counter == 21656):
+                #if (counter_test == 21656):
                    #q.put('password')
-                #counter += 1
+                #counter_test += 1
                 q.put(s)
-    except:
-        sys.exit(0)
+    except KeyboardInterrupt:
+        sys.exit(0)        
 
-def _force_queue_join(q):
-    while q.qsize() != 0:
-        try:
-            q.get(True, 1)
-            q.task_done()
-        except Empty:
-            return 
+def remove_inactive_clients():
+    inactive_clients = []
+    for c in clients:
+        if (not c.isActive()):
+            inactive_clients.append(c)
+
+    for c in inactive_clients:
+        print "Client ", c.id, " is inactive."
+        clients.remove(c)
 
 def prepare_data_for_transfer(q, stream):
     data = {}
     data["data"] = stream
     data["passwords"] = get_passwords(q)
+
+    if (not data["passwords"]):
+        return None 
+
     return json.dumps(data)
 
 def get_passwords(q):
@@ -153,14 +198,13 @@ def get_passwords(q):
     passwords = []
     while (counter < payload_size):
         try:
-            passwords.append(q.get(True, 1))
+            # 5 seconds timeout. Should be more then enough as _generate() sleeps only for 2.
+            passwords.append(q.get(True, 5))
             q.task_done()
             counter += 1
         except Empty:
-            print "INFO: All passwords are gone."
             break
     return passwords
-
 
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + " ..."
@@ -195,10 +239,16 @@ if __name__ == "__main__":
 
     parser.add_argument("document_type", help="type of the protected document (MS Office / OpenDocument)")
     parser.add_argument("filename", help="the protected document")
-    parser.add_argument("-pr", "--passwordrange", type=int, help="password range to brute-force (i.e., 2 -> aa..zz)")
+    parser.add_argument("-pr", "--passwordrange", type=int, help="password range to brute-force (i.e., 2 -> aa..zz, default 8)")
+    parser.add_argument("-ps", "--payloadsize", type=int, help="number of passwords sent to clients (default 20000)")
     parser.add_argument("tcp_ip", help="IP address to which clients should connect")
     parser.add_argument("tcp_port", help="port to which clients should connect")
     args = parser.parse_args()
+
+    global payload_size
+    payload_size = args.payloadsize if args.payloadsize else 20000
+    global clients
+    clients = []
 
     stream = get_verification_data(args.document_type, args.filename)
 
