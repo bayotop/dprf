@@ -6,55 +6,95 @@
     Document types:
         1: Microsoft Office
         2: OpenDocument
+        3: Portable Document Format 
 
     Actually supported formats:
         Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
         OpenDocument - v1.2 with AES-256 in CBC mode
+        Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
     More to implement:
-        - Support for more formats (Office 2015, PDF, older ODT versions, ...)
+        - Support for more formats (Office 2015, older ODT versions, ...)
+        - Implement owner password support for PDF
 """
 
 import argparse
 from ctypes import c_char
 import itertools
+import multiprocessing
 from multiprocessing import Process, JoinableQueue, Value, Array
-from Queue import Empty
 import re
 import string
 import sys
 from subprocess import Popen, check_output 
 import time
 import textwrap
+from Queue import Empty
 
 __author__ = "Martin Bajanik"
-__date__   = "13.10.2016"
+__date__   = "16.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
-def init(stream, password_range): 
+def init(stream, password_range, passwords): 
+    if (not password_range and not passwords):
+        raise ValueError('Need to provide a password range to generate or a list of passwords.')
+    if (password_range and passwords):
+        raise ValueError('Need to provide either a password range or a password list (not both).')
+
+    input_data = parse_verification_data(stream)
+    print "Initializing brute-force. Updates after each 1000 hashes ..."
+
     try:
-        input_data = parse_verification_data(stream)
-        print "Initializing brute-force. Updates after each 1000 hashes ..."
+        if (password_range and not passwords):
+            return init_rangebased_brute_force(input_data, password_range)
 
-        q = JoinableQueue()
-        counter = Value('i', 0)
-        found = Value('b', False)
-        password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
+        if (passwords and not password_range):
+            return init_listbased_brute_force(input_data, passwords)
+    except KeyboardInterrupt:
+        sys.exit(0)  
 
-        t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
+
+def init_rangebased_brute_force(input_data, password_range):   
+    q = JoinableQueue()
+    counter = Value('i', 0)
+    found = Value('b', False)
+    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
+
+    t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
+    t.daemon = True
+    t.start()
+
+    for i in range(4):
+        t = Process(target=_brute_force, name="Brute-Force Core " + str(i), args=(q, counter, found, input_data, password))
         t.daemon = True
         t.start()
 
-        for i in range(4):
-            t = Process(target=_brute_force, name="Brute-Force Core " + str(i), args=(q, counter, found, input_data, password))
-            t.daemon = True
-            t.start()
+    # TO DO: Make sure something is put on queue before q.join() is called.
+    q.put("_dummy")
+    q.join()
 
-        # TO DO: Make sure something is put on queue before q.join() is called.
-        q.put("_dummy")
+    return str(found.value) + ':' + password.value
+
+def init_listbased_brute_force(input_data, passwords):
+    q = JoinableQueue()
+    counter = Value('i', 0)
+    found = Value('b', False)
+    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
+
+    # Fill the passwords into a joinable queue
+    for i in passwords:
+        q.put(i)
+
+    for i in range(4):
+        t = Process(target=_brute_force, name="Brute-Force Core " + str(i), args=(q, counter, found, input_data, password))
+        t.daemon = True
+        t.start()
+
+    try:
         q.join()
     except KeyboardInterrupt:
+        q.join()
         print "The brute-forcing was terminated by user..."
         sys.exit(0)
 
@@ -66,11 +106,12 @@ def _brute_force(q, counter, found, input_data, password):
         while True:
             # No point in trying when password was found. Force q.join() so we can send password to server.
             if (found.value):
-                _force_queue_join(q);
+                _force_queue_join(q)
                 return
 
             try:
                 pwd = q.get(True, 1)
+                q.task_done()
             except Empty:
                 return 
             else:
@@ -88,8 +129,8 @@ def _brute_force(q, counter, found, input_data, password):
                     except OSError:
                         pass
                     finally:
-                        sys.exit(0)
-                q.task_done()
+                        _force_queue_join(q)
+                        return
 
                 if (result):
                     with found.get_lock():
@@ -98,7 +139,7 @@ def _brute_force(q, counter, found, input_data, password):
                         print("Correct password is '" + pwd + "'")
                     # Force q.join() to be triggered
                     # TO DO: find a nicer way 
-                    _force_queue_join(q);
+                    _force_queue_join(q)
                     return
 
                 with counter.get_lock():
@@ -111,8 +152,8 @@ def _brute_force(q, counter, found, input_data, password):
                     print "Speed: " + str(speed) + " H/sec"
                     print "Queue size: " + str(q.qsize())
     except KeyboardInterrupt:
-        sys.exit(0)
-
+        _force_queue_join(q)
+        return
     return
 
 def _call_msoffcrypto_core(pwd, input_data):
@@ -156,29 +197,32 @@ def _generate(q, password_range, found):
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
     try:
-        counter = 0 
+        #counter = 0 
         for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
             # Make sure we can easily force q.join when password is found.
             while (q.qsize() > 5000):
-                time.sleep(2);
+                time.sleep(2)
             # TO DO: Find a better way to cancel generating after password is found
             if (found.value):
-                _force_queue_join(q);
+                _force_queue_join(q)
                 return
             # Test scenario when password is generated
-            if (counter == 3656):
-               q.put('user')
-            counter += 1
+            #if (counter == 1829):
+            #   q.put('password')
+            #counter += 1
             q.put(s)
-    except:
-        sys.exit(0)
+    except KeyboardInterrupt:
+        _force_queue_join(q)
+        return
 
 def _force_queue_join(q):
+    print multiprocessing.current_process().name + " cleaning up..."
     while q.qsize() != 0:
         try:
             q.get(True, 1)
             q.task_done()
         except Empty:
+            print "Queue is empty..."
             return 
 
 def get_verification_data(doc_type, filename):
@@ -214,7 +258,7 @@ def parse_verification_data(stream):
         return data_array
 
     print "The input data is not supported."
-    exit(1); 
+    exit(1)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -227,7 +271,7 @@ if __name__ == "__main__":
             Document types:
                 1: Microsoft Office
                 2: OpenDocument
-                3: Portable Document Format (PDF)
+                3: Portable Document Format
 
             Actually supported formats:
                 Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
@@ -245,7 +289,7 @@ if __name__ == "__main__":
     if (not stream):
         sys.exit(0)
 
-    result = init(stream, args.passwordrange if args.passwordrange else 8)
+    result = init(stream, args.passwordrange if args.passwordrange else 8, None)
     results = result.split(':')
 
     if (not int(results[0])):

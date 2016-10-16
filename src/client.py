@@ -6,12 +6,14 @@
     Document types:
         1: Microsoft Office
         2: OpenDocument
+        3: Portable Document Format 
 
     Actually supported formats:
         Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
         OpenDocument - v1.2 with AES-256 in CBC mode
+        Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
-    Known Issues:
+    More to implement:
         - Implement status checking in separate thread, to ask the server if any other client
             already found the correct password.
 """
@@ -39,20 +41,18 @@ def connect_to_server(tcp_ip, tcp_port, found, password = None):
         client.connect((tcp_ip, tcp_port))
     except: 
         print "Connection was refused by the server."
-        exit(1);
+        exit(1)
 
     client.sendall(prepare_message(found, password))
     client.shutdown(socket.SHUT_WR)
     if (not found):
         json_data = recvall(client)
-        print "Received data:"
-        print json_data
+        print "Received data. Initializing brute-force..."
         data = json.loads(json_data)
-
     client.close()
 
     if (not found):
-        init(tcp_ip, tcp_port, data["data"], data["password_range"])
+        init(tcp_ip, tcp_port, data["data"], data["passwords"])
 
 def prepare_message(found, password):
     data = {}
@@ -74,14 +74,18 @@ def recvall(connection):
             else:
                 return b"".join(chunks)
 
-def init(tcp_ip, tcp_port, input_data, password_range):
+def init(tcp_ip, tcp_port, input_data, passwords):
     # Here is custom brute-forcing core called. In this case it is brute_force.py
     # In general can be anything hashcat, john etc.
     if (not input_data):
         print "Empty data received from server."
         return
 
-    result = brute_force.init(input_data, password_range);
+    if (not passwords):
+        print "No passwords provided by server."
+        return
+
+    result = brute_force.init(input_data, 0, passwords)
 
     results = result.split(':')
 
@@ -90,7 +94,7 @@ def init(tcp_ip, tcp_port, input_data, password_range):
     if int(results[0]):
         connect_to_server(tcp_ip, tcp_port, True, results[1])
     else:       
-        connect_to_server(tcp_ip, tcp_port, False);
+        connect_to_server(tcp_ip, tcp_port, False)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -103,10 +107,12 @@ if __name__ == "__main__":
             Document types:
                 1: Microsoft Office
                 2: OpenDocument
+                3: Portable Document Format
 
             Actually supported formats:
                 Office Document Structure - EncryptionInfo Stream (Standard Encryption) (Office 2007)
                 OpenDocument - v1.2 with AES-256 in CBC mode
+                Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
             """))
 
     parser.add_argument("tcp_ip", help="IP of the synchronization server")
