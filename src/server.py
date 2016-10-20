@@ -15,27 +15,23 @@
 
     More to implement:
         - Needs refactoring.
-        - The client state is refreshed every time a new message is received. The problem is that
-          if there are no more messages, the state won't get updated and the server is stuck.
-        - If there is atleast one working client, any client unresponsive more then 20 minutes 
-          will be treated as unresponsive. Couldn't find a nice way to synchronize clients, between
-          processes / threads, therefore this solution for now.
-        - Create a logger, this print shit is ridiculous.
-        - Some kinf of hearth-beat would be useful between server - client. Could solve the client
-          sync problem, too.
-        - Curses (just nice to have).
+        - If a client becomes inactive, there are possible passwords that will never be tried.
+          The inactive client's data should be resend to another client ideally.
+        - Implement a logger, this print shit is ridiculous.
+        - Curses UI.
 """
 
 import argparse
 from datetime import datetime, timedelta
 import itertools
 import json
-from multiprocessing import Process, JoinableQueue, Value, Array
+from multiprocessing import Process, JoinableQueue, Value
 import string
 import socket
 import sys
 from subprocess import check_output
 import textwrap
+import threading
 import time
 from Queue import Empty
 
@@ -50,13 +46,16 @@ class Client:
         self.last_activity = last_activity
 
     def __str__(self):
-        return "ID: " + self.id + "Last activity" + str(self.last_activity)
+        return "ID: " + self.id + " Last activity: " + str(self.last_activity)
 
     def __eq__(self, other):
         return self.id == other.id
 
     def isActive(self):
-        return self.last_activity > datetime.now() - timedelta(minutes=20)
+        return self.last_activity > datetime.now() - timedelta(seconds=120)
+
+    def refresh(self, last_activity):
+        self.last_activity = last_activity
 
 
 def run_server(tcp_ip, tcp_port, stream, password_range):
@@ -64,6 +63,14 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
     found = Value('b', False)
 
     t = Process(target=generate, name="Password Generator", args=(q, password_range, found))
+    t.daemon = True
+    t.start()
+
+    t = threading.Thread(target=hearthbeat, name="Hearthbeat", args=(tcp_ip, found))
+    t.daemon = True
+    t.start()
+
+    t= threading.Thread(target=remove_inactive_clients, name="Client clean-up", args=())
     t.daemon = True
     t.start()
 
@@ -79,9 +86,7 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
     global counter
     counter = 0
 
-    while True:
-        remove_inactive_clients()
-        print "Everything ready."
+    while True:     
         print "Number of clients: " + str(len(clients))
         print "Estimated speed: " + str(1 / (time.time() - start_time) * counter) + " H/sec"
         message = prepare_data_for_transfer(q, stream)
@@ -93,7 +98,7 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
         try:
             client, address = server.accept()
         except KeyboardInterrupt:
-            print "Stoping server ..."
+            print "Stoping server..."
             server.close()
             return
 
@@ -158,7 +163,7 @@ def generate(q, password_range, found):
     # repeat=1 => a-z
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
-    #counter_test = 0
+    counter_test = 0
     try:
         for x in range(1, password_range + 1 if password_range else 9): # default is 1..8
             for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=x)):
@@ -166,22 +171,54 @@ def generate(q, password_range, found):
                 while (q.qsize() > payload_size * 2):
                     time.sleep(2)
                 # Test scenario when password is generated
-                #if (counter_test == 21656):
-                   #q.put('password')
-                #counter_test += 1
+                if (counter_test == 3785):
+                   q.put('password')
+                counter_test += 1
                 q.put(s)
     except KeyboardInterrupt:
         sys.exit(0)        
 
-def remove_inactive_clients():
-    inactive_clients = []
-    for c in clients:
-        if (not c.isActive()):
-            inactive_clients.append(c)
+def hearthbeat(tcp_ip, found):
+    try:
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.bind((tcp_ip, 31337))
+        server.listen(5)
+    except socket.error as ex:
+        print "Error opening heartbeat socket:", ex
+        return
 
-    for c in inactive_clients:
-        print "Client ", c.id, " is inactive."
-        clients.remove(c)
+    while True:
+        try:
+            client, address = server.accept()
+        except KeyboardInterrupt:
+            server.close()
+            return
+
+        json_data = recvall(client)
+        client.shutdown(socket.SHUT_RD)
+        data = json.loads(json_data)
+        client_identifier = data["id"]
+
+        if (client_identifier in (x.id for x in clients)):
+            [c for c in clients if c.id == client_identifier][0].refresh(datetime.now())
+
+        data = {}
+        data["found"] = found.value
+        client.sendall(json.dumps(data))
+        client.close()
+
+def remove_inactive_clients():
+    while True:
+        time.sleep(120)
+        inactive_clients = []
+        for c in clients:
+            if (not c.isActive()):
+                inactive_clients.append(c)
+
+        for c in inactive_clients:
+            print "Client ", c.id, " is inactive."           
+            clients.remove(c)
+            print "Active clietns: ", len(clients)
 
 def prepare_data_for_transfer(q, stream):
     data = {}
