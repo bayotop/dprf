@@ -17,11 +17,11 @@
 import argparse
 from ctypes import c_char
 import json
-import threading
 import re
 import socket
 import sys
 import textwrap
+import threading
 import time
 import uuid
 
@@ -29,12 +29,11 @@ import uuid
 import brute_force
 
 __author__ = "Martin Bajanik"
-__date__   = "13.10.2016"
+__date__   = "21.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
 def connect_to_server(tcp_ip, tcp_port, found):
-    global shutdown_flag
     password = None
 
     while not found:
@@ -47,13 +46,12 @@ def connect_to_server(tcp_ip, tcp_port, found):
                 json_data = recvall(client)
                 if (not json_data):
                     print "No data received from server. Exiting."
-                    return
+                    exit(1);
                 print "Received data. Initializing brute-force..."
                 data = json.loads(json_data)
             client.close()
         except socket.error: 
-            print "Connection was refused by the server."
-            shutdown_flag = True
+            print "Can't continue with brute-force. The server seems to be down."
             exit(1)
 
         found, password = init(data["data"], data["passwords"])
@@ -65,13 +63,7 @@ def connect_to_server(tcp_ip, tcp_port, found):
         client.shutdown(socket.SHUT_WR)
         client.close()
     except socket.error: 
-        print "Connection was refused by the server."
-        shutdown_flag = True
-        exit(1)
-
-    # In case password is found, set the flag so hearthbeat can stop.
-    print "Exiting..."
-    shutdown_flag = True
+        print "Failed to send found password to server (connection was refused)."
 
 def prepare_message(found, password, hearthbeat = False):
     data = {}
@@ -106,27 +98,15 @@ def init(input_data, passwords):
         print "No passwords provided by server."
         return
 
-    result = brute_force.init(input_data, 0, passwords)
-
-    # TO DO: This is to make sure, the killed flag is set to True after the heartbeat stops.
-    # This is a weird workaround, should be ideally done in a way nicer way.
-    time.sleep(1); 
-    if (shutdown_flag):
-        exit(1)
-
-    results = result.split(':')
+    found, password = brute_force.init(input_data, 0, passwords)
 
     print "Finished brute-force attack. Sending the results to server."
-    return int(results[0]), results[1]
+    return found, password
 
 def hearthbeat(tcp_ip):
     while True:
         try:
-            # Hearth beats are sent every ~60 seconds.
-            for i in range(10):
-                if shutdown_flag:
-                    return
-                time.sleep(1)
+            time.sleep(60)
         except KeyboardInterrupt:
             return
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -134,15 +114,12 @@ def hearthbeat(tcp_ip):
             client.connect((tcp_ip, 31337))   
             client.sendall(prepare_message(None, None, True))
             client.shutdown(socket.SHUT_WR)
-            json_data = recvall(client)
-            if (not json_data):
-                print "No data received from server. Exiting."
-                return
-
-            data = json.loads(json_data)
+            json_data = recvall(client) # Any reposnse means, the server is running => password is not found yet.
             client.close()
         except socket.error: 
-            print "Connection was refused by the server."
+            # TO DO: Find a way to terminate the main thread (brute_force.init waits for q.join() which is not easily interruptable).
+            # ATM the client will have to finish the currect chunk of passwords before exiting.
+            print "Hearthbeat failed. Server seems to be down."
             return
 
 if __name__ == "__main__":
@@ -170,13 +147,9 @@ if __name__ == "__main__":
 
     global identifier
     identifier = str(uuid.uuid4())
-    global shutdown_flag
-    shutdown_flag = False
 
-    t = threading.Thread(target=connect_to_server, name="Password finder", args=(args.tcp_ip, int(args.tcp_port), False))
+    t = threading.Thread(target=hearthbeat, name="Hearthbeat", args=(args.tcp_ip,))
+    t.daemon = True
     t.start()
 
-    hearthbeat(args.tcp_ip)
-    shutdown_flag = True
-    # There is probably no easy way to kill the brute_force.init() call so we can exit right away.
-    t.join()
+    connect_to_server(args.tcp_ip, int(args.tcp_port), False)

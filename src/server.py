@@ -36,7 +36,7 @@ import time
 from Queue import Empty
 
 __author__ = "Martin Bajanik"
-__date__   = "13.10.2016"
+__date__   = "21.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
@@ -171,7 +171,7 @@ def generate(q, password_range, found):
                 while (q.qsize() > payload_size * 2):
                     time.sleep(2)
                 # Test scenario when password is generated
-                if (counter_test == 3785):
+                if (counter_test == 1200):
                    q.put('password')
                 counter_test += 1
                 q.put(s)

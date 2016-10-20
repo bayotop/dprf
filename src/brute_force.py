@@ -33,7 +33,7 @@ import textwrap
 from Queue import Empty
 
 __author__ = "Martin Bajanik"
-__date__   = "16.10.2016"
+__date__   = "21.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
@@ -75,7 +75,7 @@ def init_rangebased_brute_force(input_data, password_range):
     q.put("_dummy")
     q.join()
 
-    return str(found.value) + ':' + password.value
+    return found.value, password.value
 
 def init_listbased_brute_force(input_data, passwords):
     q = JoinableQueue()
@@ -95,11 +95,11 @@ def init_listbased_brute_force(input_data, passwords):
     try:
         q.join()
     except KeyboardInterrupt:
-        q.join()
+        q.join() # This second q.join is neccessary, as otherwise the script gets stuck on KeyboardInterrupt.
         print "The brute-forcing was terminated by user..."
         sys.exit(0)
 
-    return str(found.value) + ':' + password.value
+    return found.value, password.value
 
 def _brute_force(q, counter, found, input_data, password):
     start = time.time()
@@ -198,7 +198,7 @@ def _generate(q, password_range, found):
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
     try:
-        #counter = 0 
+        counter = 0 
         for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
             # Make sure we can easily force q.join when password is found.
             while (q.qsize() > 5000):
@@ -208,9 +208,9 @@ def _generate(q, password_range, found):
                 _force_queue_join(q)
                 return
             # Test scenario when password is generated
-            #if (counter == 1829):
-            #   q.put('password')
-            #counter += 1
+            if (counter == 1829):
+               q.put('password')
+            counter += 1
             q.put(s)
     except KeyboardInterrupt:
         _force_queue_join(q)
@@ -288,8 +288,7 @@ if __name__ == "__main__":
     if (not stream):
         sys.exit(0)
 
-    result = init(stream, args.passwordrange if args.passwordrange else 8, None)
-    results = result.split(':')
+    found, password = init(stream, args.passwordrange if args.passwordrange else 8, None)
 
-    if (not int(results[0])):
+    if (not found):
         print "Password is not in brute-forced space."
