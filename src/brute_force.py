@@ -38,6 +38,8 @@ __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
 def init(stream, password_range, passwords): 
+    # The common entry point
+    # Need to determine whether range or list based brute-force should be started
     if (not password_range and not passwords):
         raise ValueError('Need to provide a password range to generate or a list of passwords.')
     if (password_range and passwords):
@@ -55,12 +57,12 @@ def init(stream, password_range, passwords):
     except KeyboardInterrupt:
         sys.exit(0)  
 
-
+# In case of the range based attack the actual passwords are generated in a seperate process, within this script
 def init_rangebased_brute_force(input_data, password_range):   
     q = JoinableQueue()
     counter = Value('i', 0)
     found = Value('b', False)
-    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
+    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution
 
     t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
     t.daemon = True
@@ -71,17 +73,18 @@ def init_rangebased_brute_force(input_data, password_range):
         t.daemon = True
         t.start()
 
-    # TO DO: Make sure something is put on queue before q.join() is called.
+    # Make sure something is put on queue before q.join() is called
     q.put("_dummy")
     q.join()
 
     return found.value, password.value
 
+# In case of the list based attack a password list has to be provided as parameter 'passwords'
 def init_listbased_brute_force(input_data, passwords):
     q = JoinableQueue()
     counter = Value('i', 0)
     found = Value('b', False)
-    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution.
+    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution
 
     # Fill the passwords into a joinable queue
     for i in passwords:
@@ -95,7 +98,7 @@ def init_listbased_brute_force(input_data, passwords):
     try:
         q.join()
     except KeyboardInterrupt:
-        q.join() # This second q.join is neccessary, as otherwise the script gets stuck on KeyboardInterrupt.
+        q.join() # This second q.join is neccessary, as otherwise the script gets stuck on KeyboardInterrupt
         print "The brute-forcing was terminated by user..."
         sys.exit(0)
 
@@ -104,18 +107,19 @@ def init_listbased_brute_force(input_data, passwords):
 def _brute_force(q, counter, found, input_data, password):
     start = time.time()
     try:
+        # The cycle is broken in case there are no passwords left in the queue or the correct password is found
         while True:
-            # No point in trying when password was found. Force q.join() so we can send password to server.
+            # No point in trying when password was found. Force q.join() so we can send password to server
             if (found.value):
                 _force_queue_join(q)
                 return
 
             try:
                 pwd = q.get(True, 1)
-                q.task_done()
             except Empty:
                 return 
             else:
+                # Launch the correct brute-force core
                 if (input_data[0] == "office"):
                     p = _call_msoffcrypto_core(pwd, input_data)
                 if (input_data[0] == "odt"):
@@ -126,6 +130,7 @@ def _brute_force(q, counter, found, input_data, password):
                     result = p.wait()
                 except KeyboardInterrupt:
                     try:
+                        q.task_done()
                         p.terminate()
                     except OSError:
                         pass
@@ -139,9 +144,12 @@ def _brute_force(q, counter, found, input_data, password):
                         password.value = pwd
                         print("Correct password is '" + pwd + "'")
                     # Force q.join() to be triggered
-                    # TO DO: find a nicer way 
+                    # TO DO: Find a nicer way
+                    q.task_done()
                     _force_queue_join(q)
                     return
+
+                q.task_done()
 
                 with counter.get_lock():
                     counter.value += 1
@@ -200,7 +208,7 @@ def _generate(q, password_range, found):
     try:
         counter = 0 
         for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
-            # Make sure we can easily force q.join when password is found.
+            # Make sure we can easily force q.join when password is found
             while (q.qsize() > 5000):
                 time.sleep(2)
             # TO DO: Find a better way to cancel generating after password is found
@@ -216,6 +224,7 @@ def _generate(q, password_range, found):
         _force_queue_join(q)
         return
 
+# Makes sure q.join() is triggered eventually to correctly terminate the script
 def _force_queue_join(q):
     print multiprocessing.current_process().name + " cleaning up..."
     while q.qsize() != 0:
@@ -225,6 +234,7 @@ def _force_queue_join(q):
         except Empty:
             return 
 
+# Parses the input file to get data neccessary to verify the password
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + " ..."
  
@@ -238,6 +248,7 @@ def get_verification_data(doc_type, filename):
     if (doc_type == '3'):
         return check_output(["python", "pdf-impl/pdf2john.py", filename]).strip()
 
+# Prepares the data in a format thats understandable by the verifiers written in C
 def parse_verification_data(stream):
     print "Preparing verification data ..."
 

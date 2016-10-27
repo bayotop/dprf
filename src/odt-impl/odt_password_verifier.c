@@ -20,6 +20,7 @@
 static int verbose = 0;
 
 int verify(char *password, unsigned char *checksum, unsigned char *iv, unsigned char *salt, unsigned char* encrypted_file, int encrypted_file_len);
+void handleErrors(void);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *iv, unsigned char *plaintext);
 int sha256(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
@@ -27,7 +28,7 @@ int verbose_print(char *print);
 int str_to_uchar(unsigned char **output, unsigned char *str);
 
 int main(int argc, char *argv[]) {
-
+    // All parameters except the -v switch are mandatory
     if (argc != 7 && argc != 8) {    
         fprintf(stderr, "Usage: %s password checksum iv salt encrypted_file encrypted_file_length [-v]\n", argv[0]);
         exit(1);
@@ -49,9 +50,9 @@ int main(int argc, char *argv[]) {
 
 int verify(char *password, unsigned char *checksum_str, unsigned char *iv_str, unsigned char *salt_str, unsigned char* encrypted_file_str, int encrypted_file_len) {
 
-    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00). 
-    // See execve(2) semantics for more information.
-    // This slows down the brute-forcing by ~6 H/sec. 
+    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00)
+    // See execve(2) semantics for more information
+    // This has as low as no impact on perfomance
     unsigned char checksum[SHA256_DIGEST_LENGTH];
     unsigned char *ch = checksum;
     str_to_uchar(&ch, checksum_str);
@@ -90,16 +91,16 @@ int verify(char *password, unsigned char *checksum_str, unsigned char *iv_str, u
 
 	int decryptedFile_len = decrypt(encrypted_file, encrypted_file_len, derived_key, iv, decryptedFile);
 
-    /* This is a very unsafe password correctnes check. It assumes that the encrypted file for verification is 
-    / /Configurations2/accelerator/current.xml which in many cases is an empty file with size 0. 
+    /* This is a very unsafe password correctnes check prone to false positives. It assumes that the encrypted file 
+    / for verification is /Configurations2/accelerator/current.xml which in many cases is an empty file with size 0. 
     / When deflated it becomes 0x03 0x00 (checksum: m0+yTt1tHYgw4nI5gmPNvwJrlzksw1OHuZHcAkimKPk="). 
     / From the specification it is not clear what padding scheme is used and I couldn't figure it out, yet. */
     if (decryptedFile_len == 16) {
     	verbose_print("Experimental password verification: ");
     	return decryptedFile[0] == 0x03 && decryptedFile[1] == 0x00;
-    	verbose_print("\n");
     }
 
+    // Verifying using the standard method (i.e. any non-empty file)
     if (decryptedFile_len > 1024) {
     	decryptedFile_len = 1024;
     }
@@ -203,6 +204,8 @@ int verbose_print(char *print) {
     }
 }
 
+// Converts an ASCII Hex string to an array of bytes
+// "aabbccddeeff" => { 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff }
 int str_to_uchar(unsigned char **output, unsigned char *str) {
     BIGNUM *input = BN_new();
     int input_len = BN_hex2bn(&input, str);

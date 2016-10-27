@@ -36,19 +36,20 @@ __status__ = "Development"
 def connect_to_server(tcp_ip, tcp_port, found):
     password = None
 
+    # As long as the password is not found, we ask the server to provide more data
+    # In case the server, is down or returns no data (which should never happen) the client stops
     while not found:
         try:
             client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             client.connect((tcp_ip, tcp_port))
             client.sendall(prepare_message(found, password))
             client.shutdown(socket.SHUT_WR)
-            if (not found):
-                json_data = recvall(client)
-                if (not json_data):
-                    print "No data received from server. Exiting."
-                    exit(1);
-                print "Received data. Initializing brute-force..."
-                data = json.loads(json_data)
+            json_data = recvall(client)
+            if (not json_data):
+                print "No data received from server. Exiting."
+                exit(1);
+            print "Received data. Initializing brute-force..."
+            data = json.loads(json_data)
             client.close()
         except socket.error: 
             print "Can't continue with brute-force. The server seems to be down."
@@ -56,6 +57,7 @@ def connect_to_server(tcp_ip, tcp_port, found):
 
         found, password = init(data["data"], data["passwords"])
 
+    # Once the correct password is found we notify the server
     try:
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect((tcp_ip, tcp_port))
@@ -66,6 +68,8 @@ def connect_to_server(tcp_ip, tcp_port, found):
         print "Failed to send found password to server (connection was refused)."
 
 def prepare_message(found, password, hearthbeat = False):
+    # The message should contain the password in case found is true
+    # A hearthbeat message contains only the clients ID
     data = {}
     if (not hearthbeat):
         data["found"] = True if found else False
@@ -85,11 +89,11 @@ def recvall(connection):
             if chunk:
                 chunks.append(chunk)
             else:
-                return b"".join(chunks)
+                return b''.join(chunks)
 
 def init(input_data, passwords):
-    # Here is custom brute-forcing core called. In this case it is brute_force.py
-    # In general can be anything hashcat, john etc.
+    # Here is the custom brute-forcing core called. In this case it is brute_force.py
+    # In general can be anything hashcat, JtR etc.
     if (not input_data):
         print "Empty data received from server."
         return
@@ -114,11 +118,11 @@ def hearthbeat(tcp_ip):
             client.connect((tcp_ip, 31337))   
             client.sendall(prepare_message(None, None, True))
             client.shutdown(socket.SHUT_WR)
-            json_data = recvall(client) # Any reposnse means, the server is running => password is not found yet.
+            json_data = recvall(client) # Any reposnse means, the server is running => password is not found yet
             client.close()
         except socket.error: 
-            # TO DO: Find a way to terminate the main thread (brute_force.init waits for q.join() which is not easily interruptable).
-            # ATM the client will have to finish the currect chunk of passwords before exiting.
+            # TO DO: Find a way to terminate the main thread (brute_force.init waits for q.join() which is not easily interruptable)
+            # ATM the client will have to finish the currect chunk of passwords before exiting
             print "Hearthbeat failed. Server seems to be down."
             return
 
@@ -145,9 +149,12 @@ if __name__ == "__main__":
     parser.add_argument("tcp_port", help="port on which synchronization server is listening")
     args = parser.parse_args()
 
+    # A unique identifier identifying a concrete client instance
     global identifier
     identifier = str(uuid.uuid4())
 
+    # Running in a separate thread the hearthbeat ensures that the server does not render the client inactive 
+    # A hearthbeat is sent every 60 seconds 
     t = threading.Thread(target=hearthbeat, name="Hearthbeat", args=(args.tcp_ip,))
     t.daemon = True
     t.start()

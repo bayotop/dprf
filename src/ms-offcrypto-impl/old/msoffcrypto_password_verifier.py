@@ -1,9 +1,10 @@
 #!/usr/bin/env python
+
 import argparse
-import textwrap
-import struct
 from Crypto.Hash.SHA import SHA1Hash
 from Crypto.Cipher import AES
+import struct
+import textwrap
 
 # [MS-OFFCRYPTO] Office Document Structure - Password Verifier 
 		

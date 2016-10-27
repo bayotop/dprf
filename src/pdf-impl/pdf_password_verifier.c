@@ -38,6 +38,7 @@ int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len);
 int str_to_uchar(unsigned char **output, unsigned char *str);
 
 int main(int argc, char *argv[]) {
+    // All parameters except the -v switch are mandatory
     if (argc != 13 && argc != 14) {
          fprintf(stderr, "Usage: %s password v r length p meta_encrypted id_length id u_length u o_length o [-v]\n", argv[0]);
          exit(1);
@@ -62,9 +63,9 @@ int main(int argc, char *argv[]) {
 int verify(char *password, int v, int r, int length, int p, int meta_encrypted, int id_length, unsigned char *id_str, int u_length, unsigned char *u_str,
     int o_length, unsigned char *o_str) {
 
-    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00). 
-    // See execve(2) semantics for more information.
-    // This has as low as no impact on perfomance.
+    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00)
+    // See execve(2) semantics for more information
+    // This has as low as no impact on perfomance
     unsigned char id[id_length];
     unsigned char *idp = id;
     str_to_uchar(&idp, id_str);
@@ -77,11 +78,13 @@ int verify(char *password, int v, int r, int length, int p, int meta_encrypted, 
     unsigned char *op = o;
     str_to_uchar(&op, o_str);
 
+    // The password padding as per PDF specification
     const int password_padding_length = 32;
     unsigned char password_padding[32] = { 
         0x28, 0xBF, 0x4E, 0x5E, 0x4E, 0x75, 0x8A, 0x41, 0x64, 0x00, 0x4E, 0x56, 0xFF, 0xFA, 0x01, 0x08, 
         0x2E, 0x2E, 0x00, 0xB6, 0xD0, 0x68, 0x3E, 0x80, 0x2F, 0x0C, 0xA9, 0xFE, 0x64, 0x53, 0x69, 0x7A };
 
+    // This are the only possible combinations of version and revision as per PDF specification
     if ((v != 1 && v != 2 && v != 4 && v != 5) ||
         (v == 1 && r != 2) ||
         (v == 2 && r != 3) ||
@@ -102,7 +105,7 @@ int verify(char *password, int v, int r, int length, int p, int meta_encrypted, 
     }
     verbose_print("'\n");
 
-    // 'New' algorithms are completly different. Revision 5 is actually the easiest to brute-force.
+    // 'New' (revision >= 5) algorithms are completly different. Revision 5 is actually the easiest to brute-force.
     // TO DO: Unicode support, should be enforced by encoding to UTF-8.
     if (r == 5) {
         return verify_user_r5(password, u, u_length);
@@ -127,6 +130,7 @@ int verify(char *password, int v, int r, int length, int p, int meta_encrypted, 
         return 1;
     }
 
+    // revision r <= 4
     // Algorithm 2 (see Document management — Portable document format specification)
     unsigned char pass[password_padding_length];
     int pass_length = (strlen(password) <= 32) ? strlen(password) : 32;
@@ -481,6 +485,8 @@ int verbose_print(char *print) {
     }
 }
 
+// Converts an ASCII Hex string to an array of bytes
+// "aabbccddeeff" => { 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff }
 int str_to_uchar(unsigned char **output, unsigned char *str) {
     BIGNUM *input = BN_new();
     int input_len = BN_hex2bn(&input, str);

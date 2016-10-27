@@ -20,6 +20,7 @@ static int verbose = 0;
 
 int verify(char *password, unsigned char *salt, int salt_len, unsigned char *encrypted_verifier, int encrypted_verifier_len, 
     unsigned char *encrypted_verifier_hash, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size);
+void handleErrors(void);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *plaintext);
 int sha1(unsigned char *input, int input_length, unsigned char *output);
 void print_hex(unsigned char *input, int len);
@@ -29,6 +30,7 @@ int str_to_uchar(unsigned char **output, unsigned char *str);
 
 
 int main(int argc, char *argv[]) {
+    // All parameters except the -v switch are mandatory
     if (argc != 10 && argc != 11) {
          fprintf(stderr, "Usage: %s password salt salt_length encrypted_verifier encrypted_verifier_length \
             encrypted_verifier_hash encrypted_verifier_hash_length aes_key_length verifier_hash_size [-v]\n", argv[0]);
@@ -54,9 +56,9 @@ int main(int argc, char *argv[]) {
 int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char *encrypted_verifier_str, int encrypted_verifier_len, 
     unsigned char *encrypted_verifier_hash_str, int encrypted_verifier_hash_len, int aes_key_length, int verifier_hash_size) {
 
-    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00). 
-    // See execve(2) semantics for more information.
-    // This has as low as no impact on perfomance.
+    // Convert input to binary data. It's not possible to pass binary data directly because of null bytes (\x00)
+    // See execve(2) semantics for more information
+    // This has as low as no impact on perfomance
     unsigned char salt[salt_len];
     unsigned char *s = salt;
     str_to_uchar(&s, salt_str);
@@ -69,7 +71,7 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     unsigned char *evh = encrypted_verifier_hash;
     str_to_uchar(&evh, encrypted_verifier_hash_str);
 
-    // Prepare the input. We need to string in UTF16LE encoding.
+    // Prepare the input. We need to string in UTF16LE encoding
     int input_length = strlen(password);
 
     char *pass = NULL;
@@ -86,7 +88,7 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     }
     verbose_print("'\n");
 
-    // Initial hashing ( H0 = SHA1(SALT + PASSWORD) -> Hn = SHA1(i + (Hn - 1)) (50000x) -> HFinal = SHA1(H50000 + BLOCK) )
+    // Initial hashing (H0 = SHA1(SALT + PASSWORD) -> Hn = SHA1(i + (Hn - 1)) (50000x) -> HFinal = SHA1(H50000 + BLOCK))
     size_t length = input_length_utf16;
 
     unsigned char *initial_input = calloc(salt_len + length, sizeof(char));
@@ -120,13 +122,13 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     verbose_print("Final hash: ");
     print_hex(hash, SHA_DIGEST_LENGTH);
 
-    // According to specification (MS-OFFCRYPTO) we should concatenate x1 and x2 and take first cbRequiredKeyLength only.
-    // However, because AES-128 is used, only the first 16 bytes are relevant, and x1 is 20 bytes long there for we do not need x2.
+    // According to specification (MS-OFFCRYPTO) we should concatenate x1 and x2 and take first cbRequiredKeyLength only
+    // However, because AES-128 is used, only the first 16 bytes are relevant, and x1 is 20 bytes long there for we do not need x2
 
     char x1temp[64] = { [0 ... 63] = 0x36 };
     // char x2temp[64] = { [0 ... 63] = 0x5c };
 
-    // Here 20 is cbHash (MS-OFFCRYPTO) -> SHA_DIGEST_LENGTH
+    // Here SHA_DIGEST_LENGTH is actually cbHash according to (MS-OFFCRYPTO)
     int x;
     for (x = 0; x < SHA_DIGEST_LENGTH; x++) {
         x1temp[x] ^= hash[x];
@@ -153,6 +155,7 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     verbose_print("Derived key: ");
     print_hex(finalKey, aes_key_length / 8);
 
+    // Attempt to decrypt the verifier values
     unsigned char decryptedVerifier[128];
     unsigned char decryptedVerifierHash[128];
 
@@ -163,6 +166,8 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
 
     int decryptedVerifierHash_len = decrypt(encrypted_verifier_hash, encrypted_verifier_hash_len, finalKey, decryptedVerifierHash);
     if (decryptedVerifierHash_len != 32 || decryptedVerifierHash[verifier_hash_size] != 0x00) {
+        // Only the first 20 bytes are relevant as SHA1 is used to hash the verifier
+        // Therefore the last 12 bytes have to be 0
         return 0;           
     }
     
@@ -174,6 +179,8 @@ int verify(char *password, unsigned char *salt_str, int salt_len, unsigned char 
     verbose_print("Decrypted 'EncryptedVerifierHash':  ");
     print_hex(decryptedVerifierHash, SHA_DIGEST_LENGTH);
 
+    // Actually if in the previous check the last 12 bytes of the decrypted verifier hash are 0,
+    // this check could be ommited for performance reasons
     for (i = 0; i < SHA_DIGEST_LENGTH; i++) {
         if (verifierHash[i] != decryptedVerifierHash[i]) {
             return 0;
@@ -328,6 +335,8 @@ int utf8_to_utf16le(char *utf8, char **utf16, int *utf16_len)
     return 1;
 }
 
+// Converts an ASCII Hex string to an array of bytes
+// "aabbccddeeff" => { 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff }
 int str_to_uchar(unsigned char **output, unsigned char *str) {
     BIGNUM *input = BN_new();
     int input_len = BN_hex2bn(&input, str);
