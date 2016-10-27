@@ -116,50 +116,47 @@ def _brute_force(q, counter, found, input_data, password):
 
             try:
                 pwd = q.get(True, 1)
+                q.task_done()
             except Empty:
                 return 
-            else:
-                # Launch the correct brute-force core
-                if (input_data[0] == "office"):
-                    p = _call_msoffcrypto_core(pwd, input_data)
-                if (input_data[0] == "odt"):
-                    p = _call_odt_core(pwd, input_data)
-                if (input_data[0] == "pdf"):
-                    p = _call_pdf_core(pwd, input_data)
-                try: 
-                    result = p.wait()
-                except KeyboardInterrupt:
-                    try:
-                        q.task_done()
-                        p.terminate()
-                    except OSError:
-                        pass
-                    finally:
-                        _force_queue_join(q)
-                        return
 
-                if (result):
-                    with found.get_lock():
-                        found.value = True
-                        password.value = pwd
-                        print("Correct password is '" + pwd + "'")
-                    # Force q.join() to be triggered
-                    # TO DO: Find a nicer way
-                    q.task_done()
+            # Launch the correct brute-force core
+            if (input_data[0] == "office"):
+                p = _call_msoffcrypto_core(pwd, input_data)
+            if (input_data[0] == "odt"):
+                p = _call_odt_core(pwd, input_data)
+            if (input_data[0] == "pdf"):
+                p = _call_pdf_core(pwd, input_data)
+            try: 
+                result = p.wait()
+            except KeyboardInterrupt:
+                try:
+                    p.terminate()
+                except OSError:
+                    pass
+                finally:
                     _force_queue_join(q)
                     return
 
-                q.task_done()
+            if (result):
+                with found.get_lock():
+                    found.value = True
+                    password.value = pwd
+                    print("Correct password is '" + pwd + "'")
+                # Force q.join() to be triggered
+                # TO DO: Find a nicer way
+                _force_queue_join(q)
+                return
 
-                with counter.get_lock():
-                    counter.value += 1
+            with counter.get_lock():
+                counter.value += 1
 
-                if (counter.value != 0 and (counter.value % 1000 == 0)):
-                    actual = time.time()
-                    speed = 1 / (actual - start) * counter.value
-                    print "Running time: " + str(actual - start) + " & tried since: " + str(counter.value) + " passes"
-                    print "Speed: " + str(speed) + " H/sec"
-                    print "Queue size: " + str(q.qsize())
+            if (counter.value != 0 and (counter.value % 1000 == 0)):
+                actual = time.time()
+                speed = 1 / (actual - start) * counter.value
+                print "Running time: " + str(actual - start) + " & tried since: " + str(counter.value) + " passes"
+                print "Speed: " + str(speed) + " H/sec"
+                print "Queue size: " + str(q.qsize())
     except KeyboardInterrupt:
         _force_queue_join(q)
         return
@@ -206,7 +203,7 @@ def _generate(q, password_range, found):
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
     try:
-        counter = 0 
+        #counter = 0 
         for s in itertools.imap(''.join, itertools.product(string.lowercase, repeat=password_range)):
             # Make sure we can easily force q.join when password is found
             while (q.qsize() > 5000):
@@ -216,9 +213,9 @@ def _generate(q, password_range, found):
                 _force_queue_join(q)
                 return
             # Test scenario when password is generated
-            if (counter == 1829):
-               q.put('password')
-            counter += 1
+            #if (counter == 1829):
+               #q.put('password')
+            #counter += 1
             q.put(s)
     except KeyboardInterrupt:
         _force_queue_join(q)

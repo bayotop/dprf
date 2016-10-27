@@ -185,7 +185,7 @@ def generate(q, password_range, found):
                 while (q.qsize() > payload_size * 2):
                     time.sleep(2)
                 # Test scenario when password is generated
-                # if (counter_test == 1200):
+                #if (counter_test == 1200):
                    #q.put('password')
                 #counter_test += 1
                 q.put(s)
