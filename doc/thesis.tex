@@ -79,9 +79,7 @@ keyword1, keyword2, ...
 
 \section{Authenticity}
 
-\chapter{Proprietary vs. Open Standards}
-
-\chapter{Office Document Cryptography Structure}
+\chapter{MS Office Document Cryptography Structure}
 
 \section{Encryption} 
 
@@ -107,7 +105,7 @@ Only the last mentioned method will be further discussed as the others are not u
 
 If standard encryption or agile encryption is used, the relevant information about cryptography used to encrypt the document is contained within a structure named \textit{EncryptionInfo}.
 
-\subsection{Standard Encryption}
+\subsection{Standard Encryption} \label{msoff_standard_enc}
 
 Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream (see Appendix \ref{ei_standardstream} for a detailed description).
 
@@ -249,7 +247,7 @@ ECMA-376 documents can optionally utilize user-provided custom encryption module
 
 \section{Encryption}
 
-\subsection{Password Based Encryption}
+\subsection{Password Based Encryption} \label{pdf_enc}
 
 \subsection{Public-Key Security Handlers}
 
@@ -261,7 +259,7 @@ ECMA-376 documents can optionally utilize user-provided custom encryption module
 
 \chapter{Open Document Format for Office Applications}
 
-\section{Encryption}
+\section{Encryption} \label{odt_enc}
 
 The encryption process as specified in Open Document Format for Office Applications (\textit{OpenDocument}) \cite{odt_spec} has 3 stages:
 
@@ -279,27 +277,143 @@ The exact algorithms and other necessary cryptographic parameters are defined in
 
 \section{Summary}
 
-\chapter{MS-OFFCRYPTO Standard Implementation}
+\chapter{Distributed Password Recovery}
 
-\section{ECMA-376 Document Encryption}
+As people tend to forget passwords, it is likely, that access to password protected documents can be lost. A straight-forward solution in this case is brute-force, as password verification is done offline. To show and further discuss the speed and efficiency of this process a distributed password recovery system was created.
 
-\section{RC4 CryptoAPI Encryption}
+\section{Implementation}
 
-\section{RC4 Encryption}
+The input for the system is a password protected Office, PDF or ODT document. As the password verification process can be very different among these formats, a detailed list of currently supported algorithms follows:
 
-\section{XOR Obfuscation}
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{MS Office Document Structure -- Standard Encryption (as described in subsection \ref{msoff_standard_enc}).}
+	\item{Portable Document Format --  version 1.3 to 1.7 using standard security handlers from version 1 to 5 and revision 2 to 6 (as described in subsection \ref{pdf_enc}).}
+	\item{Open Document Format – v1.2 using AES-256 (as described in subsection \ref{odt_enc}).}
+\end{itemize}
 
-\section{ECMA-376 Document Write Protection}
+The second important input is a number which defines the maximum password length to be tried within the brute-force process.
 
-\chapter{Breaking Document Encryption}
+The whole system consists of 3 logically separated parts highlighted on figure \ref{ddpbf_design}. 
 
-\section{Brute-forcing Encryption Passwords}
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1\textwidth]{figures/ddpbf_design.pdf}
+	\caption{Distributed password recovery design}
+	\label{ddpbf_design}
+\end{figure}
 
-\subsection{Implementation}
+The whole implementation and any files mentioned in this chapter can be found on the attached CD or in the official thesis archive available at \textit{http://is.muni.cz/}.
 
-\subsection{Testing and Results}
+\subsection{Client-server model}\label{client-server}
 
-\section{?}
+The server provides a simple command line interface and can be started using the following command: 
+
+\begin{lstlisting}
+$ python server.py [-h] [-pr PASSWORDRANGE] [-ps PAYLOADSIZE] document_type filename tcp_ip tcp_port
+\end{lstlisting}
+
+Note that the current version must be run with Python 2.7 in order to function properly. A detailed description of the arguments follows:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{\textbf{-h} -- Shows a descriptive help message.}
+	\item{\textbf{-pr} -- Sets the password’s maximum length (default: 8).}
+		\begin{itemize}
+		\setlength\itemsep{0.1em}
+			\item{All passwords up to the specified length will be checked.}
+		\end{itemize}
+	\item{\textbf{-ps} -- Number of passwords sent to each client on every connection (default: 20,000).}
+	\item{\textbf{document\_type} -- Number identifying the given document's type.}
+		\begin{itemize}
+		\setlength\itemsep{0.1em}
+			\item{1 -- Microsoft Office}
+			\item{2 -- Open Document Format}
+			\item{3 -- Portable Document Format}
+		\end{itemize}
+	\item{\textbf{filename} -- Path to the document file which’s password should be recovered.}
+	\item{\textbf{tcp\_ip, tcp\_port} --  IP address and port number to which clients should connect in order to communicate with the server.}
+\end{itemize}\label{server_params}
+
+When run, the server extracts all information necessary to perform the password recovery process. This is accomplished by calling one of the document parsers described in subsection \ref{doc_parsers}. Afterwards the server is passively waiting for clients to connect. Once connected the server sends the verification data and a list of passwords in JSON \cite{rfc7159} format:
+
+\begin{lstlisting} 
+{"passwords":[<passwords>], "data":"<document_parser_output>"}
+\end{lstlisting}\label{server_message}
+
+Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
+
+A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value the time interval between two messages exchanged between a client and the server might be very high (even days). This is because, the client will ask for a new list of passwords after he successfully verifies all the passwords he received. In order to distinguish between an inactive client (the client machine may be terminated etc.) a hearth beat mechanism is implemented. Every 60 seconds a small message (hearth beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 second will be marked as inactive. In case the client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically an unlimited linear growth in performance.
+
+On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is measured in hashes per second. The speed is naively computed as the quotient of the elapsed speed and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shutdown in case it receives the correct password from a client.
+
+The client can be run using the following command:
+
+\begin{lstlisting}
+$ python client.py [-h] tcp_ip tcp_port 
+\end{lstlisting}
+
+The \textit{tcp\_ip} and \textit{tcp\_port} are the connection parameters used to communicate with the server. The optional \textit{–h} argument will show a descriptive help message.
+Once run, the client generates a UUID and immediately sends a message to the server asking for a password list and the verification data. This information is then passed to the brute-force engine described in subsection \ref{brute_force_engine}. It is important to note that any brute-force engine could be used (e.g. hashcat or JtR) \cite{hashcat, jtr}. When done the result is sent to the server. In case the password was not found, the client will receive a new password list and repeat the whole process.
+
+\subsection{Document parsers} \label{doc_parsers}
+
+The document parsers are stand-alone Python scripts that take document files as input and return all necessary data to proceed with the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files.
+
+\subsection{Brute-force engine}\label{brute_force_engine}
+
+The brute-force engine can be used either as a stand-alone Python script providing a simple command line interface, or as a Python module. When run separately it can be started using the following command:
+
+\begin{lstlisting}
+python brute_force.py [-h] [-pr PASSWORDRANGE] document_type filename
+\end{lstlisting}
+
+All the parameters correspond to the identically named parameters described in subsection \ref{server_params}. Once the engine is invoked this way, it parses the given document and initializes a password range based brute-force process. Passwords are generated and placed in a synchronized queue in a separate process. The passwords in the queue are being pulled one by one and verified using a \textit{password verifier}. There are 3 separate verifiers for the supported documents respectively. All three verifiers are written in plain C and the script utilizes Python's multiprocessing module to invoke more instances simultaneously. C was chosen for performance reasons, as it was shown that a plain rewrite from Python to C speeded up the verification process by approximately 4 times. The code snippet below shows the methods responsible for calling these verifiers.
+
+\begin{lstlisting}
+def _call_msoffcrypto_core(pwd, input_data):
+    return Popen(["ms-offcrypto-impl/./msoffcrypto", pwd, 
+        input_data[5], # salt
+        input_data[4], # salt_length
+        input_data[6], # encrypted_verifier
+        str(len(input_data[6]) / 2), # enc_verifier_length
+        input_data[7], # encrypted_verifier_hash
+        str(len(input_data[7]) / 2), # enc_verifier_hash_length
+        str(input_data[3]), # aes_key_length
+        str(input_data[2]), # verifier_hash_size
+        ])
+
+def _call_odt_core(pwd, input_data):
+    return Popen(["odt-impl/./odt", pwd, 
+        input_data[2], # checksum
+        input_data[3], # iv
+        input_data[4], # salt
+        input_data[5], # encrypted_file
+        str(input_data[6]), # encrypted_file_length
+        ]) 
+
+def _call_pdf_core(pwd, input_data):
+    return Popen(["pdf-impl/./pdf", pwd, 
+        input_data[1], # version
+        input_data[2], # revision
+        input_data[3], # length
+        input_data[4], # p
+        input_data[5], # meta_encrypted 
+        input_data[6], # id_length 
+        str(input_data[7]), # id
+        input_data[8], # u_length 
+        str(input_data[9]), # u 
+        input_data[10], # o_length
+        str(input_data[11]) # o
+        ]) 
+\end{lstlisting}
+
+
+In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them it is necessary to add a link to the library (i.e. using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
+
+Additionally the script provides a public \textit{init()} method, which requires either a password range or a list of passwords as an argument. If a password range is given the script generates its own list, otherwise it places the passwords provided directly in a synchronized processing queue. The second approach is used in the client-server model discussed in subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can in general be more efficient then plain brute-forcing of passwords, resulting in a faster password recovery.
+
+\section{Testing and Results}
 
 \chapter{Conclusion}
 
@@ -312,7 +426,19 @@ Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/bb204774(v=VS.
 	\bibitem{plan_office_crypto}Microsoft Corporation. 2014 \textit{Plan cryptography and encryption settings for Office 2013.} [ONLINE].
 Available at: \\ \textit{https://technet.microsoft.com/en-us/library/cc179125.aspx.} [Accessed 18 September 2016]
 	\bibitem{odt_spec}OASIS Standard. 2011 \textit{Open Document Format for Office Applications (OpenDocument) Version 1.2.} [ONLINE]. Available at: \textit{http://docs.oasis-open.org/office/v1.2/OpenDocument-v1.2.html.} [Accessed 19 September 2016]
+	\bibitem{rfc7159} T. Bray, Ed. 2014 \textit{The JavaScript Object Notation (JSON) Data Interchange Format} [ONLINE].\\ Available at: 	\textit{https://tools.ietf.org/rfc/rfc7159.txt} [Accessed 30 October 2016]
+	\bibitem{rfc4122} P. Leach, Microsoft, M. Mealling, Refactored Networks, LLC, R. Salz, DataPower Technology, Inc.  2005 \textit{The JavaScript Object Notation (JSON) Data Interchange Format} [ONLINE].\\ Available at: \textit{https://tools.ietf.org/rfc/rfc4122.txt} [Accessed 30 October 2016]
+	\bibitem{hashcat}\textit{hashcat - advanced password recovery.} [ONLINE].
+Available at: \\ \textit{https://hashcat.net/hashcat/.} [Accessed 30 October 2016]
+	\bibitem{jtr}\textit{John the Ripper password cracker.} [ONLINE].
+Available at: \\ \textit{http://www.openwall.com/john/.} [Accessed 30 October 2016]
+	\bibitem{openssl}OpenSSL Software Foundation. 2016 \textit{Welcome to OpenSSL!.} [ONLINE].
+Available at: \\ \textit{https://www.openssl.org/.} [Accessed 30 October 2016]
 \end{thebibliography}
+
+
+
+
 
 \begin{appendix}
 	\chapter{Attachements}

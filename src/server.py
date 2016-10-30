@@ -65,7 +65,7 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
     found = Value('b', False)
 
     # Create a process responsible for generating password 
-    t = Process(target=generate, name="Password Generator", args=(q, password_range, found))
+    t = Process(target=generate, name="Password Generator", args=(q, password_range))
     t.daemon = True
     t.start()
 
@@ -172,7 +172,7 @@ def recvall(connection):
             else:
                 return b''.join(chunks)
 
-def generate(q, password_range, found): 
+def generate(q, password_range): 
     # repeat=1 => a-z
     # repeat=2 => aa-zz
     # repeat=8 => aaaaaaaa-zzzzzzzz
