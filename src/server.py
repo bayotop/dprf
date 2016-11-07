@@ -192,7 +192,7 @@ def generate(q, password_range):
     except KeyboardInterrupt:
         sys.exit(0)        
 
-# Every client is sending hearthbeats to the server so it can maintain the currectly active clients
+# Every client is sending hearthbeats to the server so it can maintain the currently active clients
 def hearthbeat(tcp_ip, found):
     try:
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

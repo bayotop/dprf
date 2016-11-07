@@ -110,7 +110,7 @@ def init(input_data, passwords):
 def hearthbeat(tcp_ip):
     while True:
         try:
-            time.sleep(60)
+            time.sleep(20)
         except KeyboardInterrupt:
             return
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
