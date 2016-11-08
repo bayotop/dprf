@@ -14,10 +14,7 @@
         Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
     More to implement:
-        - Needs refactoring.
-        - If a client becomes inactive, there are possible passwords that will never be tried.
-          The inactive client's data should be resend to another client ideally.
-        - Implement a logger, this print shit is ridiculous.
+        - Implement a logger, get rid of prints.
         - Curses UI.
 """
 
@@ -75,7 +72,7 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
     t.start()
 
     # A separate thread to remove inactive clients
-    t= threading.Thread(target=remove_inactive_clients, name="Client clean-up", args=())
+    t= threading.Thread(target=remove_inactive_clients, name="Client clean-up", args=(q, ))
     t.daemon = True
     t.start()
 
@@ -88,9 +85,13 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
         print "Error opening socket:", ex
         return
 
-    start_time = time.time()
     global counter
     counter = 0
+    # Is used to keep track of currently processed password by clients. In case a client is invalidated
+    # the data has to resend to another client
+    global processed_passwords
+    processed_passwords = {}
+    start_time = time.time()
 
     # The server is terminated once the password is found, there are no more active clients and no
     # passwords are left to try or a KeyboardInterrupt (Ctrl + C) is received
@@ -109,6 +110,11 @@ def run_server(tcp_ip, tcp_port, stream, password_range):
             print "Stoping server..."
             server.close()
             return
+
+        # It is possible the queue was filled with passwords from inactivated clients
+        # while the server was waiting for new connections
+        if (not message):
+        	message = prepare_data_for_transfer(q, stream)
 
         result, counter = handle_connection(client, address, message)
         if (result):
@@ -148,6 +154,7 @@ def handle_connection(client, address, message):
         # Send new data in case there is any
         if (message):
             client.sendall(message)
+            processed_passwords[client_identifier] = json.loads(message)["passwords"]
             print "Sent new instruction to: ", address
         else:
             # Mark the client as inactive, as it will terminate when no data is sent
@@ -185,8 +192,8 @@ def generate(q, password_range):
                 while (q.qsize() > payload_size * 2):
                     time.sleep(2)
                 # Test scenario when password is generated
-                #if (counter_test == 1200):
-                   #q.put('password')
+                #if (counter_test == 449):
+                #   q.put('password')
                 #counter_test += 1
                 q.put(s)
     except KeyboardInterrupt:
@@ -224,7 +231,7 @@ def hearthbeat(tcp_ip, found):
         client.close()
 
 # Every 2 minutes, all inactive clients will be removed
-def remove_inactive_clients():
+def remove_inactive_clients(q):
     while True:
         time.sleep(120)
         inactive_clients = []
@@ -235,6 +242,10 @@ def remove_inactive_clients():
         for c in inactive_clients:
             print "Client ", c.id, " is inactive."           
             clients.remove(c)
+            # Add all password to processing queue as they have to be resend to another client eventually
+            for password in processed_passwords[c.id]:
+            	q.put(password)
+            del processed_passwords[c.id]
             print "Active clients: ", len(clients)
 
 # {"data":"hashes_neccessary_for_bruteforce", "passwords":[password_list]}
@@ -264,7 +275,7 @@ def get_passwords(q):
 
 # Parses the input file to get data neccessary to verify the password
 def get_verification_data(doc_type, filename):
-    print "Parsing " + filename + " ..."
+    print "Parsing " + filename + "..."
 
     if (doc_type == '1'):
         return check_output(["python", "ms-offcrypto-impl/office2john.py", filename]).strip()

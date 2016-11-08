@@ -16,7 +16,6 @@
     More to implement:
         - Support for more formats (Office 2015, older ODT versions, ...)
         - Implement owner password support for PDF
-        - Needs refactoring.
 """
 
 import argparse
@@ -46,7 +45,7 @@ def init(stream, password_range, passwords):
         raise ValueError('Need to provide either a password range or a password list (not both).')
 
     input_data = parse_verification_data(stream)
-    print "Initializing brute-force. Updates after each 1000 hashes ..."
+    print "Initializing brute-force. Updates after each 1000 hashes."
 
     try:
         if (password_range and not passwords):
@@ -99,7 +98,7 @@ def init_listbased_brute_force(input_data, passwords):
         q.join()
     except KeyboardInterrupt:
         q.join() # This second q.join is neccessary, as otherwise the script gets stuck on KeyboardInterrupt
-        print "The brute-forcing was terminated by user..."
+        print "The brute-forcing was terminated by user."
         sys.exit(0)
 
     return found.value, password.value
@@ -233,7 +232,7 @@ def _force_queue_join(q):
 
 # Parses the input file to get data neccessary to verify the password
 def get_verification_data(doc_type, filename):
-    print "Parsing " + filename + " ..."
+    print "Parsing " + filename + "..."
  
     # TO DO: Refactor this to properly include this python scripts instead of using check_output
     if (doc_type == '1'):
@@ -247,7 +246,7 @@ def get_verification_data(doc_type, filename):
 
 # Prepares the data in a format thats understandable by the verifiers written in C
 def parse_verification_data(stream):
-    print "Preparing verification data ..."
+    print "Preparing verification data..."
 
     data_array = re.split("(?:\*)", stream)
 
