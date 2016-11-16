@@ -24,6 +24,7 @@ static int verbose = 0;
 
 int verify(char *password, int v, int r, int length, int p, int meta_encrypted, int id_length, unsigned char *id_str,
     int u_length, unsigned char *u_str, int o_length, unsigned char *o_str);
+int verify_user_r5(unsigned char *password, unsigned char *u, int u_length);
 int decrypt(unsigned char *ciphertext, int ciphertext_len, unsigned char *key, unsigned char *plaintext);
 int sha256(unsigned char *input, int input_length, unsigned char *output);
 int md5(unsigned char *input, int input_length, unsigned char *output);
