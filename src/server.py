@@ -281,7 +281,7 @@ def get_verification_data(doc_type, filename):
         return check_output(["python", "ms-offcrypto-impl/office2john.py", filename]).strip()
 
     if (doc_type == '2'):
-        return check_output(["python", "odt-impl/odt2hashes.py", "-e", filename]).strip()
+        return check_output(["python", "odt-impl/odt2hashes.py", filename]).strip()
 
     if (doc_type == '3'):
         return check_output(["python", "pdf-impl/pdf2john.py", filename]).strip()

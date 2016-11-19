@@ -39,10 +39,10 @@
 \thesistitle{Security analysis of document protections} % enter thesis title
 \thesissubtitle{Master's thesis}
 \thesisstudent{Martin Bajaník} % name of the author
-\thesiswoman{false} % defines author’s gender
+\thesiswoman{false} % defines author's gender
 \thesisfaculty{fi}
 \thesisyear{autumn 2014}
-\thesisadvisor{RNDr. Jiří Kůr, Ph.D.} % fill in advisor’s name
+\thesisadvisor{RNDr. Jiří Kůr, Ph.D.} % fill in advisor's name
 \thesislang{en}
 
 \begin{document}
@@ -185,7 +185,7 @@ A more detailed description of these settings can be found on the Microsoft Deve
 
 Further specified are the steps necessary for deriving keys, generating initialization vectors, and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. Later in this chapter, this key is referred to as the intermediate key. Appendix \ref{ei_agilestream} shows the schema specifying its structure.
 
-For the sake of completeness, it is important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account. 
+For the sake of completeness, it is important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account.
 
 The key derivation process is similar to the method used in standard encryption and also derived from PKCS \#5 \cite{rfc2898}:
 
@@ -244,21 +244,168 @@ ECMA-376 documents can optionally utilize user-provided custom encryption module
 
 \chapter{Portable Document Format}
 
+Document protections of the Portable Document Format (PDF) files will be discussed in details necessary in context of this thesis. All information is based on two publicly available specifications:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+\item{Adobe® Supplement to the ISO 32000 \cite{iso32000sup} and}
+\item{Document management — Portable document format — Part 1: PDF 1.7 \cite{pdf_spec}.}
+\end{itemize}
+
+The focus is on differences between various versions and how the protections evolved over time. As the file structure of PDF files is rather complicated and extensive the focus is, for the sake of simplicity, on parts specifically relevant to protection mechanisms.
+
 \section{Encryption}
 
-\subsection{Password Based Encryption} \label{pdf_enc}
+The encryption mechanism was introduced in PDF version 1.1. All encryption related information is stored in the document's trailer dictionary \cite[p. 42]{pdf_spec} within an encryption dictionary. The presence of the encryption dictionary implies that the document is encrypted.
 
-\subsection{Public-Key Security Handlers}
+Every encryption dictionary is required to specify the name of the preferred security handler for the document. The handler is a software module that implements aspects of the encryption process and controls access to the contents of an encrypted document. A standard password-based security handler is defined directly by the PDF specification. All algorithms discussed further in this chapter are specific for this standard security handler. It is important to note that while working on this thesis various tools where used to create PDF files and all these files implemented only the standard handler.
+
+\subsection{Standard Security Handler}\label{pdf_enc}
+
+Unlike other formats discussed (MS Office, Open Document Format) PDF's standard security handler allows the user to define access permissions and two passwords: an owner password and a user password. The user password is enough to decrypt a document. The owner password is needed in case the user wants to modify the access permissions of the document.
+
+Table \ref{handler_entries} shows encryption dictionary entries defined by the standard security handler which are important in the algorithms described later in this chapter.
+
+\begin{table}[hp]
+	\centering
+	\begin{tabular}{|l|l|}
+               	\hline
+		\textbf{Key}&\textbf{Value}\\
+		\hline
+		V&Specifies the algorithm used to encrypt \\
+		&and decrypt the document.\\
+		&\textbf{0} -- An algorithm that is undocumented.\\
+	`	&This value shall not be used.\\
+		&\textbf{1} -- RC4 or AES with a key of length 40 bits.\\
+		&\textbf{2} -- RC4 or AES permitting keys longer then 40 bits.\\
+		&Available since PDF 1.4.\\
+		&\textbf{3} -- An unpublished algorithm permitting keys\\
+		&of lengths from 40 to 128 bits.\\
+		&This value shall not be used in conforming PDF files.\\
+		&\textbf{4} -- A more sophisticated encryption and decryption\\
+		&process using rules defined in additional entries\\
+		&of the dictionary. Available since PDF 1.5.\\
+		&\textbf{5} -- Same as 4 but allows the use of keys with length\\
+		&256 bits.\\
+	\hline
+		R&Specifies the revision of the security handler.\\
+		&Can have values from 2 to 5 and mostly depends on V.\\
+	\hline
+		O&A 32-byte (for R being 1-4) or 48-byte (for R being 5)\\ 
+		&string based on both the owner and the user password.\\
+		&Used in the owner password verification process.\\
+	\hline
+		U&A 32-byte (for R being 1-4) or 48-byte (for R being 5)\\ 
+		&string based on the user password.\\
+		&Used in the user or owner password verification process.\\
+	\hline
+		P&A set of flags representing access permissions.\\
+	\hline
+		EncryptMetadata& In case V is of value 4 (PDF 1.5) indicates\\
+		&if document metadata should be encrypted.\\
+	\hline
+           \end{tabular}
+	\caption{Encryption dictionary entries defined by the standard security handler \cite{pdf_spec}}
+	\label{handler_entries}
+\end{table}
+
+The owner-based or user-based encryption keys are computed using the following algorithm by standard security handlers of revision 1-4: 
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+\item{If the password is longer than 32 bytes\footnote{The password is represented in PDFDocEncoding \cite[157]{pdf_spec}. 32 bytes can represent 32 characters.} use only its first 32 bytes. Otherwise, pad it by appending bytes from the beginning of the following default 32-byte padding string: $28$ $BF$ $4E$ $5E$ $4E$ $75$ $8A$ $41$ $64$ $00$ $4E$ $56$ $FF$ $FA$ $01$ $08$ $2E$ $2E$ $00$ $B6$ $D0$ $68$ $3E$ $80$ $2F$ $0C$ $A9$ $FE$ $64$ $53$ $69$ $7A$. In case no user-password is provided, the whole padding string is used.}
+\item{Using a MD5 hash function compute a hash of the following data:}
+	\begin{itemize}
+		\item{The result of step 1.}
+		\item{The encryption dictionary's O entry.}
+		\item{The encryption dictionary's P entry.}
+		\item{The first element of the file's identifier array \cite[p. 43]{pdf_spec}.}
+		\item{4 bytes with the value $0xFFFFFFFF$ if document metadata is not being encrypted.}
+	\end{itemize}
+\item{For revision 3 or greater hash the first $n$ bytes of the output using MD5, where $n$ is the length of the required encryption key as defined in the encryption dictionary. Repeat this step 50 times.}
+\item{The first $n$ bytes become the computed encryption key.}
+\end{enumerate}
+
+The O entry is basically the user password encrypted by a owner-password-based key. The algorithm is as follows:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+\item{Pad or truncate the owner password the same way as described in the previous algorithm.}
+\item{Hash the output of step 1 using the MD5 hash function.}
+\item{For revision 3 or greater hash the output of previous step using the MD5 hash function. Repeat this step 50 times.}
+\item{Use the first $n$ bytes as an RC4 encryption key, where $n$ is 5 for handlers of revision 2. For handlers of revision 3 or greater $n$ is the length of the encryption key as defined in the encryption dictionary.}
+\item{Pad or truncate the user password the same way as described in the previous algorithm and encrypt it using RC4 with the key obtained in the previous step.}
+\item{For revision 3 or greater repeat the following 19 times: Take the output of the previous invocation of RC4 and pass it as input to a new invocation. The encryption key for every iteration is created by performing an XOR operation between each byte of the encryption key obtained in step 4 and the byte value of the iteration counter (values 1-19).}
+\end{enumerate}
+
+The U entry is for handlers of revision 2 the default 32-byte padding string encrypted using the user-password-based encryption key. For handlers of revision greater than 3 the way how the U entry is calculated changed. The algorithm is as follows:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+\item{Using a MD5 hash function compute a hash of the following data:}
+\begin{itemize}
+		\item{the default 32-byte padding string, and}
+		\item{the first element of the file's identifier array \cite[p. 43]{pdf_spec}.}
+\end{itemize}
+\item{Encrypt the result using RC4 with the user-password-based encryption key.}
+\item{Do the following 19 times: Take the output of the previous invocation of RC4 and pass it as input to a new invocation. The encryption key for each iteration is created by performing an XOR operation between each byte of the encryption key obtained in step 4 and the byte value of the iteration counter (values 1-19).}
+\item{Append 16 bytes of arbitrary padding to the output of the previous step.}
+\end{enumerate}
+
+Note that the user-password-based encryption key is used to decrypt contents of the document. The owner-password-based key is used to verify correctness of the provided owner-password.
+
+In revision 5 all algorithms previously mentioned were completely replaced. Two new encryption dictionary entries were introduced (see table \ref{additional_handler_entries}). 
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|}
+               \hline
+		\textbf{Key}&\textbf{Value}\\
+	\hline
+		OE&A 32-byte string based on the owner and user passwords.\\
+		UE&A 32-byte string based on the user password\\
+	\hline
+           \end{tabular}
+	\caption{Encryption dictionary entries introduced by standard security handlers of revision 5}
+	\label{additional_handler_entries}
+\end{table}
+
+The maximum password length was extended from 32 bytes to 127 bytes. As mentioned before the U and O entries were extended to 48 bytes and represent 3 logical parts. The first 32 bytes are a verification hash. The next 8 bytes are a validation salt. The last 8 bytes are a key salt. The OE and UE values contain the file encryption key encrypted by the an owner-password-based or user-password-based key respectively.
+
+At this point the publicly available supplement to the ISO 32000 \cite{iso32000sup} appears to be incomplete in terms of the file's encryption key computation. A new "Computing an encryption key" algorithm is described. This algorithm includes a step where decrypting the OE, or UE, value is necessary to get the file encryption key. Algorithms to generate the OE and UE values include a step where encrypting the file encryption key is necessary. However, the origin of the file encryption key is not mentioned. 
+
+The process of password verification is straightforward:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+\item{Truncate the provided password to 127 bytes\footnote{The password is based on Unicode (UTF-8 encoding).} if it is longer than 127 bytes.}
+\item{Compute the SHA-256 hash of the password concatenated with 8 bytes of the owner validation salt and the 48-byte U value.}
+\item{In case the result matches the 32-byte verification hash of the O value, the provided password is the correct owner password.}
+\item{Compute the SHA-256 hash of the password concatenated with 8 bytes of the user validation salt.}
+\item{In case the result matches the 32-byte verification hash of the U value, the provided password is the correct user password.}
+\end{enumerate}
+
+An interesting observation can be seen after describing the way of verifying a password provided by the user. The only computation that has to be done to verify a given password is calculating one SHA-256 hash value. This approach actually weakens the strength of the document protection as discussed in more detail in section \ref{pdf_summ}.
 
 \section{Watermark Annotations}
 
 \section{Signature Fields}
 
-\section{Summary}
+\section{Summary}\label{pdf_summ}
 
 \chapter{Open Document Format for Office Applications}
 
-\section{Encryption} \label{odt_enc}
+Documents in the Open Document Format can be represented in two ways \cite{odt_spec}:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+\item{A single XML document.}
+\item{A collection of files within a package, each of which stores a part of the document.}
+\end{itemize}
+
+Particularly important in context of this paper is the latter way mentioned. All protection mechanisms defined apply to packages. A package representing a single Open Document Format file will be referred to as “ODT package” from now on.
+
+\section{Encryption}\label{odt_enc}
 
 The encryption process as specified in Open Document Format for Office Applications (\textit{OpenDocument}) \cite{odt_spec} has 3 stages:
 
@@ -269,8 +416,24 @@ The encryption process as specified in Open Document Format for Office Applicati
 	\item{The files are encrypted using the keys created in step 2.}
 \end{enumerate}
 
-The exact algorithms and other necessary cryptographic parameters are defined in the Manifest file.
+The exact algorithms and other necessary cryptographic parameters are defined in the document's manifest. The manifest is a mandatory part of every ODT package and its relative path within the package must be \texttt{META-INF/}
+\texttt{manifest.xml}. The manifest is an XML file conforming the XML schema shown in Appendix B.
 
+For every file in the ODT package the manifest must contain an element denoted as \texttt{<manifest:file-entry>}.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1\textwidth]{figures/manifest_snippet.pdf}
+	\caption{Example of a file entry element within an ODT document's manifest file}
+	\label{manifest_snippet}
+\end{figure}
+
+A \texttt{<manifest:encryption-data>} child element indicates that the file is stored encrypted within the package. It also contains information required to decrypt the particular file. The attribute \texttt{manifest:checksum-type} specifies a digest algorithm used to calculate a hash of the file. This hash is stored in the \texttt{manifest:checksum} attribute in BASE64 encoding. 
+The algorithm used to encrypt a file is specified in the \texttt{manifest:algorithm-name} attribute of the \texttt{<manifest:algorithm>} element. In case this algorithm requires an initialization vector it is specified in the \texttt{manifest:initialization-vector} attribute.
+In a similar fashion the elements \texttt{<manifest:key-derivation>} and \texttt{<manifest:start-key generation>} specify how the start key is generated from the user password and how the encryption key is derived from the start key, respectively.
+All algorithms that can be used for the purposes discussed in this section and should be supported by implementations are listed in the Open Document Format specification. New algorithms were added as the specification was extended over time. 
+
+Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{manifest:checksum-type} and \texttt{manifest:start-key-generation-name} attributes. The only available \texttt{manifest:algorithm-name} was Blowfish in CFB mode. Version 1.2 introduced support for additional hash functions and algorithms: SHA-256, SHA-512, RIPEMD-160, 3DES, AES-128, AES-256 and AES-192. The only available key generation algorithm in all three versions is PBKDF2.
 
 \section{Digital Signatures}
 
@@ -317,7 +480,7 @@ Note that the current version must be run with Python 2.7 in order to function p
 \begin{itemize}
 \setlength\itemsep{0.1em}
 	\item{\textbf{-h} -- Shows a descriptive help message.}
-	\item{\textbf{-pr} -- Sets the password’s maximum length (default: 8).}
+	\item{\textbf{-pr} -- Sets the password's maximum length (default: 8).}
 		\begin{itemize}
 		\setlength\itemsep{0.1em}
 			\item{All passwords up to the specified length will be checked.}
@@ -330,7 +493,7 @@ Note that the current version must be run with Python 2.7 in order to function p
 			\item{2 -- Open Document Format}
 			\item{3 -- Portable Document Format}
 		\end{itemize}
-	\item{\textbf{filename} -- Path to the document file which’s password should be recovered.}
+	\item{\textbf{filename} -- Path to the document file which's password should be recovered.}
 	\item{\textbf{tcp\_ip, tcp\_port} --  IP address and port number to which clients should connect in order to communicate with the server.}
 \end{itemize}\label{server_params}
 
