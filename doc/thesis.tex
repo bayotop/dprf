@@ -437,7 +437,39 @@ Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{m
 
 \section{Digital Signatures}
 
+Digital signatures are defined beginning with version 1.2. One package may contain more signatures. The signatures are located within the \texttt{META-INF/} folder and should contain the term "signature" in their name. Every signature has to explicitly list all files which are being validated. In particular to ensure integrity of the whole document, all files should be referenced by some signature. 
+
+The Open Document Format specification describes that digital signature can be used together with encrypted packages in two ways. The signature can be applied on encrypted files and should be validated prior to decrypting the package. The other option is digitally signing the package before encrypting it. This approach will also encrypt the files containing digital signatures.  
+
+However, popular implementations seem to only support the first mentioned approach. Once a digitally signed file is encrypted, they will remove all signatures before encrypting the file. The file has to be manually resigned again. 
+
 \section{Summary}
+
+Protections described in the Open Document Format are rather simple and unambiguous. Focus on security can be seen looking at differences of various versions. Version 1.2 introduced a mechanism for digital signatures as well as support for modern cryptographic functions. The use of PBKDF2 with configurable iteration count allows mitigating simple offline brute-force attacks. However, GPU powered attacks may become extremely successful as PBKDF2 is not designed to be memory-hard \cite{PBKDF2_attack}.
+
+Two popular implementations have been tested: LibreOffice \cite{libreoffice} and Apache OpenOffice \cite{openoffice}. Both application were used in the latest available stable version at the time. For Libre Office this was version 5.2.2 and for Open Office version 4.1.3. On overview of the results is shown in table \ref{odt_impl_results}.
+
+\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|l|}
+               \hline
+		&\textbf{LibreOffice}&\textbf{Apache OpenOffice}\\
+	\hline
+		manifest:checksum-type&SHA-256&SHA-1\\
+	\hline
+		manifest:algorithm-name&AES-256&Blowfish CFB\\
+	\hline
+		manifest:start-key-derivation-name&SHA-256&SHA-1\\
+		manifest:key-derivation-name&PBKDF2&PBKDF2\\
+		manifest:iteration-count&1024&1024\\
+		manifest:key-size&32&16\\
+	\hline
+           \end{tabular}
+	\caption{Comparsion of document protections methods used by LibreOffice and Apache OpenOffice}
+	\label{odt_impl_results}
+\end{table}
+
+Both applications encrypt all files in the package. Similarly both applications include all files when applying a digital signature to the document. A particular interesting finding is that Open Office prefers the Blowfish algorithm to encrypt documents.
 
 \chapter{Distributed Password Recovery}
 
@@ -505,7 +537,7 @@ When run, the server extracts all information necessary to perform the password 
 
 Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
 
-A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value the time interval between two messages exchanged between a client and the server might be very high (even days). This is because, the client will ask for a new list of passwords after it successfully verifies all the passwords it received. To recognize inactive clients (e.g. the client machine was terminated etc.) a hearth beat mechanism is implemented. Every 20 seconds a small message (hearth beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 second will be marked as inactive. In case the client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically an unlimited linear growth in performance. The server keeps track of what password were sent to which client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive all passwords that were currently processed by it are eventually resend to another client. 
+A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value the time interval between two messages exchanged between a client and the server might be very high (even days). This is because, the client will ask for a new list of passwords after it successfully verifies all the passwords it received. To recognize inactive clients (e.g. the client machine was terminated etc.) a hearth beat mechanism is implemented. Every 20 seconds a small message (hearth beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 second will be marked as inactive. In case the client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically an unlimited linear growth in performance. The server keeps track of what passwords were sent to which client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive all passwords that were currently processed by it are eventually resend to another client. 
 
 On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is represented by the number of tried passwords per second. The speed is naively computed as the ratio of the elapsed time and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shutdown in case it receives the correct password from a client.
 
@@ -520,14 +552,14 @@ Once run, the client generates a UUID and immediately sends a message to the ser
 
 \subsection{Document parsers} \label{doc_parsers}
 
-The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODT files was implemented as part of this tesis. The parser accepts as valid input ODT files conforming the latest specification (version 1.2).
+The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODT files was implemented as part of this thesis. The parser accepts as valid input ODT files conforming the latest specification (version 1.2).
 
 \subsection{Brute-force engine}\label{brute_force_engine}
 
 The brute-force engine can be used either as a stand-alone Python script providing a simple command line interface, or as a Python module. When run separately it can be started using the following command:
 
 \begin{lstlisting}
-python brute_force.py [-h] [-pr PASSWORDRANGE] document_type filename
+$ python brute_force.py [-h] [-pr PASSWORDRANGE] document_type filename
 \end{lstlisting}
 
 All the parameters correspond to the identically named parameters described in subsection \ref{server_params}. Once the engine is invoked this way, it parses the given document and initializes a password range based brute-force process. Passwords are generated and placed in a synchronized queue in a separate process. The passwords in the queue are being pulled one by one and verified using a \textit{password verifier}. There are 3 separate verifiers for the supported documents respectively. All three verifiers are written in plain C and the script utilizes Python's multiprocessing module to invoke more instances simultaneously. C was chosen for performance reasons, as it was shown that a plain rewrite from Python to C speeded up the verification process by approximately 4 times. The code snippet below shows the methods responsible for calling these verifiers.
