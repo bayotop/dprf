@@ -9,8 +9,8 @@
    xmlns="http://www.w3.org/2000/svg"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
-   width="453.30078"
-   height="147.19141"
+   width="427.40625"
+   height="157.19141"
    id="svg2"
    version="1.1"
    inkscape:version="0.48.4 r9939"
@@ -24,9 +24,9 @@
      borderopacity="1.0"
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
-     inkscape:zoom="1.5515495"
-     inkscape:cx="232.83099"
-     inkscape:cy="140.08206"
+     inkscape:zoom="1.6333695"
+     inkscape:cx="197.22232"
+     inkscape:cy="87.587101"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
@@ -36,7 +36,7 @@
      fit-margin-bottom="0"
      inkscape:window-width="1366"
      inkscape:window-height="706"
-     inkscape:window-x="-8"
+     inkscape:window-x="1672"
      inkscape:window-y="-8"
      inkscape:window-maximized="1" />
   <metadata
@@ -79,7 +79,14 @@
            style="fill:#000080"
            id="tspan3165">text/xml</tspan><tspan
            style="fill:#aa4400"
-           id="tspan3161">&quot; manifest:size=&quot;</tspan><tspan
+           id="tspan3161">&quot;</tspan></tspan><tspan
+         sodipodi:role="line"
+         x="-297.46088"
+         y="412.74603"
+         style="font-size:8px"
+         id="tspan3048"><tspan
+           style="fill:#aa4400"
+           id="tspan3050">         manifest:size=&quot;</tspan><tspan
            style="fill:#000080"
            id="tspan3169">2047</tspan><tspan
            style="fill:#aa4400"
@@ -88,31 +95,27 @@
            id="tspan3089">&gt;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="412.74603"
-         style="font-size:8px"
-         id="tspan3044"><tspan
-           style="fill:#800080"
-           id="tspan3071">   &lt;manifest:encryption-data</tspan><tspan
-           style="fill:#aa4400"
-           id="tspan3097"> manifest:checksum-type=&quot;</tspan><tspan
-           style="fill:#000080"
-           id="tspan3046">urn:oasis:names:tc:opendocument:xmlns:\</tspan></tspan><tspan
-         sodipodi:role="line"
-         x="-297.46088"
          y="422.74603"
-         style="font-size:8px"
-         id="tspan3058"><tspan
-           style="fill:#000080"
-           id="tspan3060">                                                     manifest:1.0#sha256-1k</tspan><tspan
-           style="fill:#aa4400"
-           id="tspan3149">&quot; </tspan></tspan><tspan
+         style="font-size:8px;fill:#800080"
+         id="tspan3044">   &lt;manifest:encryption-data </tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
          y="432.74603"
          style="font-size:8px"
+         id="tspan3058"><tspan
+           style="fill:#aa4400"
+           id="tspan3062">            manifest:checksum-type=&quot;</tspan><tspan
+           style="fill:#000080"
+           id="tspan3046">urn:oasis:names:tc:opendocument:xmlns:manifest:1.0#sha256-1k</tspan><tspan
+           style="fill:#aa4400"
+           id="tspan3149">&quot; </tspan></tspan><tspan
+         sodipodi:role="line"
+         x="-297.46088"
+         y="442.74603"
+         style="font-size:8px"
          id="tspan3051"><tspan
            style="fill:#aa4400"
-           id="tspan3107">                             manifest:checksum=&quot;</tspan><tspan
+           id="tspan3107">            manifest:checksum=&quot;</tspan><tspan
            style="fill:#000080"
            id="tspan3173">+T784EXy3nLC//+G+/s79TBcgL4kBW7PjQNuIYo5XDI=</tspan><tspan
            style="fill:#aa4400"
@@ -121,7 +124,7 @@
            id="tspan3087">&gt;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="442.74603"
+         y="452.74603"
          style="font-size:8px"
          id="tspan3041"><tspan
            style="fill:#800080"
@@ -134,12 +137,12 @@
            id="tspan3147">&quot; </tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="452.74603"
+         y="462.74603"
          style="font-size:8px"
          id="tspan3053"><tspan
            style="fill:#aa4400"
            id="tspan3115">                         manifest:initialisation-vector=&quot;</tspan><tspan
-           style="fill:#0000ff"
+           style="fill:#000080"
            id="tspan3177">ivgMZBHox17wEO4XS8r4EQ==</tspan><tspan
            style="fill:#aa4400"
            id="tspan3143">&quot;</tspan><tspan
@@ -147,7 +150,7 @@
            id="tspan3085">/&gt;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="462.74603"
+         y="472.74603"
          style="font-size:8px"
          id="tspan3043"><tspan
            style="fill:#800080"
@@ -160,7 +163,7 @@
            id="tspan3183">&quot; </tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="472.74603"
+         y="482.74603"
          style="font-size:8px"
          id="tspan3055"><tspan
            style="fill:#aa4400"
@@ -171,7 +174,7 @@
            id="tspan3185">&quot; </tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="482.74603"
+         y="492.74603"
          style="font-size:8px"
          id="tspan3057"><tspan
            style="fill:#aa4400"
@@ -182,7 +185,7 @@
            id="tspan3187">&quot;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="492.74603"
+         y="502.74603"
          style="font-size:8px"
          id="tspan3059"><tspan
            style="fill:#aa4400"
@@ -195,31 +198,27 @@
            id="tspan3083">/&gt;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="502.74603"
-         style="font-size:8px"
-         id="tspan3045"><tspan
-           style="fill:#800080"
-           id="tspan3075">     &lt;manifest:start-key-generation</tspan><tspan
-           style="fill:#aa4400"
-           id="tspan3129"> manifest:start-key-generation-name=&quot;</tspan><tspan
-           style="fill:#000080"
-           id="tspan3193">http://www.w3.org/2000/\</tspan></tspan><tspan
-         sodipodi:role="line"
-         x="-297.46088"
          y="512.74603"
-         style="font-size:8px"
-         id="tspan3064"><tspan
-           style="fill:#000080"
-           id="tspan3066">                                                                        09/xmldsig#sha256</tspan><tspan
-           style="fill:#aa4400"
-           id="tspan3141">&quot;</tspan></tspan><tspan
+         style="font-size:8px;fill:#800080"
+         id="tspan3045">     &lt;manifest:start-key-generation </tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
          y="522.74603"
          style="font-size:8px"
+         id="tspan3064"><tspan
+           style="fill:#aa4400"
+           id="tspan3074">              manifest:start-key-generation-name=&quot;</tspan><tspan
+           style="fill:#000080"
+           id="tspan3193">http://www.w3.org/2000/09/xmldsig#sha256</tspan><tspan
+           style="fill:#aa4400"
+           id="tspan3141">&quot;</tspan></tspan><tspan
+         sodipodi:role="line"
+         x="-297.46088"
+         y="532.74603"
+         style="font-size:8px"
          id="tspan3061"><tspan
            style="fill:#aa4400"
-           id="tspan3135">                                    manifest:key-size=&quot;</tspan><tspan
+           id="tspan3135">              manifest:key-size=&quot;</tspan><tspan
            style="fill:#000080"
            id="tspan3195">32</tspan><tspan
            style="fill:#aa4400"
@@ -228,12 +227,12 @@
            id="tspan3081">/&gt;</tspan></tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="532.74603"
+         y="542.74603"
          style="font-size:8px;fill:#800080"
          id="tspan3047">   &lt;/manifest:encryption-data&gt;</tspan><tspan
          sodipodi:role="line"
          x="-297.46088"
-         y="542.74603"
+         y="552.74603"
          style="font-size:8px;fill:#800080"
          id="tspan3049"> &lt;/manifest:file-entry&gt;</tspan></text>
   </g>

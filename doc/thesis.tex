@@ -106,7 +106,7 @@ If standard encryption or agile encryption is used, the relevant information abo
 
 \subsection{Standard Encryption} \label{msoff_standard_enc}
 
-Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream (see Appendix \ref{ei_standardstream} for a detailed description).
+Figure \ref{keys_length} shows the structure of an ECMA-376 encrypted document highlighting the \textit{EncryptionInfo} stream and elements important for the algorithms described further. The structure is represented as a binary stream.
 
 \begin{figure}[ht]
 	\centering
@@ -166,7 +166,7 @@ The key is eventually used to encrypt the given document using AES in ECB mode. 
 
 \subsection{Agile Encryption}
 
-When agile encryption is used, all information about the cryptography used to encrypt the document is stored in an XML element in the \textit{XmlEncryptionDescriptor} field of the \textit{EncryptionInfo} stream. This element must conform to the XML schema namespace shown in \ref{ei_agilestream}. Agile encryption allows a wide range of possible configurations and is therefore much more complex than standard encryption discussed in the previous section. The available algorithms depend on the algorithms that can be accessed through the APIs in the Windows operating system. Microsoft Office 2007 with Service Pack 2 and above support CNG (CryptoAPI: Next Generation). The following listing shows the settings and their default values, which are configurable and change the way files are being encrypted:
+When agile encryption is used, all information about the cryptography used to encrypt the document is stored in an XML element in the \textit{XmlEncryptionDescriptor} field of the \textit{EncryptionInfo} stream. This element must conform to the XML schema namespace shown in Appendix \ref{ei_agile_stream}. Agile encryption allows a wide range of possible configurations and is therefore much more complex than standard encryption discussed in the previous section. The available algorithms depend on the algorithms that can be accessed through the APIs in the Windows operating system. Microsoft Office 2007 with Service Pack 2 and above support CNG (CryptoAPI: Next Generation). The following listing shows the settings and their default values, which are configurable and change the way files are being encrypted:
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
@@ -183,7 +183,7 @@ When agile encryption is used, all information about the cryptography used to en
 
 A more detailed description of these settings can be found on the Microsoft Developer Network website\footnote{The settings and default values apply to Microsoft Office 2010 and 2013 and are identical.} \cite{plan_office_crypto}. 
 
-Further specified are the steps necessary for deriving keys, generating initialization vectors, and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. Later in this chapter, this key is referred to as the intermediate key. Appendix \ref{ei_agilestream} shows the schema specifying its structure.
+Further specified are the steps necessary for deriving keys, generating initialization vectors, and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. Later in this chapter, this key is referred to as the intermediate key. Appendix \ref{ei_password_encryptor} shows the schema specifying its structure.
 
 For the sake of completeness, it is important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using the public part of an X509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account.
 
@@ -208,7 +208,7 @@ The key derivation process is similar to the method used in standard encryption 
 Note that, unlike in standard encryption, $H()$ is not a fixed hashing algorithm and the $block$ variable depends on the purpose of the key that is being derived. Another difference is that $H_{final}$ is the final key.
 
 Initialization vectors are generated as shown in the following steps:
-\begin{enumerate}
+\begin{enumerate}\label{IVgen}
 	\item{If a \textit{blockKey} is provided the IV is:}
 	\begin{itemize}
 		\item{$H(KeySalt + blockKey)$}
@@ -223,14 +223,25 @@ To understand how the password key encryptor is generated, it is necessary to de
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
-	\item{\textbf{encryptedVerifierHashInput} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79$.} 
-	\item{\textbf{encryptedVerifierHashValue} -- a hash of the plain-bytes of \textit{encryptedVerifierHashInput} encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0xd7, 0xaa, 0x0f, 0x6d,$ $0x30, 0x61, 0x34, 0x4e$.}
-	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived using the user-supplied password and a fixed \textit{blockKey}: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
+	\item{\textbf{encryptedVerifierHashInput} -- a random array of bytes encrypted using a key derived from the user-supplied password and a fixed \textit{blockKey}: $0xfe, 0xa7, 0xd2, 0x76, 0x3b, 0x4b, 0x9e, 0x79$.} 
+	\item{\textbf{encryptedVerifierHashValue} -- a hash of the plain-bytes of \textit{encryptedVerifierHashInput} encrypted using a key derived from the user-supplied password and a fixed \textit{blockKey}:\\ $0xd7, 0xaa, 0x0f, 0x6d,$ $0x30, 0x61, 0x34, 0x4e$.}
+	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived from the user-supplied password and a fixed \textit{blockKey}: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
 \end{itemize}
 
-In addition to confidentiality, agile encryption also provides structures that are used to verify the integrity of encrypted files. These structures are stored in the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this element is further described in \ref{data_integrity}. 
+Nota that the intermediate key, used to encrypt the plain-text content of the documents, is randomly generated. Unlike in standard encryption where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a cryptographically secure pseudo-random number generator (CSPRNG), then an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
 
-As a deduction from the aforementioned steps a randomly generated key is used to encrypt the plain-text content of the documents. Unlike in standard encryption where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a cryptographically secure pseudo-random number generator (CSPRNG), then an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
+In addition to confidentiality, agile encryption also provides a way to verify integrity of encrypted files. The verification is done using the \textit{encryptedHmacKey} and \textit{encryptedHmacValue} attributes of the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this attributes is as follows:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+	\item{Obtain the intermediate key by decrypting the \textit{encryptedKeyValue} from a \textit{KeyEncryptor structure}.}
+	\item{Generate a random array of bytes. This data will be further referred to as \textit{Salt}.}
+	\item{Encrypt the \textit{Salt} with the intermediate key. Use an IV generated as specified in \ref{IVgen} with a \textit{blockKey}: \\ $0x5f, 0xb2, 0xad, 0x01, 0x0c, 0xb9, 0xe1, 0xf6$.}
+	\item{Result of step 3 becomes the \textit{encryptedHmacKey}.}
+	\item{Calculate an HMAC of the entire encrypted document. As a key use the \textit{Salt}.}
+	\item{Similarly to step 3. encrypt the result of step 5 using a \textit{blockKey}: $0xa0, 0x67, 0x7f, 0x02, 0xb2, 0x2c, 0x84, 0x33$.}
+	\item{Result of step 6 becomes the \textit{encryptedHmacValue}.}
+\end{enumerate}
 
 \subsection{Extensible Encryption} 
 
@@ -275,6 +286,27 @@ Documents represented in a binary format that are intended to be compatible with
 Note that the iteration count and hashing function are configurable. This approach helps to protect the user-specified password when the document itself gets leaked to unathorized users. However, removing the whole hash entry from the file will effectively remove the write protection.
 
 \section{Digital Signatures}\label{data_integrity}
+
+Similarly to write protection and encryption, digital signatures are different between binary Office documents and Office documents represented as specified in ECMA-376. There are to digital signature formats:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{CryptoAPI Digital Signature}
+	\item{Xmldsig Digital Signature}
+\end{itemize}
+
+Both are applicable for binary documents. ECMA-376 documents use the Xmldsig Digital Signature. Digital signatures are used to detect changes. They do not prevent users from making modifications to the document. However, MS Office applications will not allow any changes until valid signatures are not explicitly removed.
+
+\subsection{CryptoAPI Digital Signature} 
+
+A digitally signed binary document must contain a stream named "\_signatures". This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
+
+
+\subsection{Xmldsig Digital Signature}
+
+Xmldsig Digital Signatures are stored as a stream in the "\_xmlsignatures" folder. Every document can have one or more signatures. Signatures are stored separately. A single signature is represented as specified by W3C in XML Signature Syntax and Processing \cite{xmlsig}. XML Advanced Electronic Signatures \cite{xades} extensions are also allowed.
+
+Office 2007 and above use Xmldsig digital signatures by default. This is true for both binary documents and ECMA-376 documents. In Office 2007 signed document parts are hashed using SHA-1. Note that it is the only supported hash algorithm. Higher versions can use any hash algorithm that is supported by the underlying operating system. As an example Office 2013 uses SHA-256.
 
 \section{Summary}
 
@@ -649,35 +681,151 @@ Additionally the script provides a public \textit{init()} method, which requires
 
 \chapter{Conclusion}
 
-\begin{thebibliography}{}
-	\bibitem{msoffcrypto}Microsoft Corporation. 2015 \textit{[MS-OFFCRYPTO]: Office Document Cryptography Structure.} [ONLINE].
-Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/office/cc313071(v=office.12).aspx.} [Accessed 18 September 2016]
-	\bibitem{rfc2898} B. Kaliski. 2000 \textit{PKCS \#5: Password-Based Cryptography Specification Version 2.0.} [ONLINE].\\ Available at: \textit{http://www.ietf.org/rfc/rfc5246.txt} [Accessed 18 September 2016]
-	\bibitem{cng_functions}Microsoft Corporation. 2016 \textit{CNG Cryptographic Configuration Functions.} [ONLINE].
-Available at: \\ \textit{https://msdn.microsoft.com/en-us/library/bb204774(v=VS.85).aspx.} [Accessed 18 September 2016]
-	\bibitem{plan_office_crypto}Microsoft Corporation. 2014 \textit{Plan cryptography and encryption settings for Office 2013.} [ONLINE].
-Available at: \\ \textit{https://technet.microsoft.com/en-us/library/cc179125.aspx.} [Accessed 18 September 2016]
-	\bibitem{odt_spec}OASIS Standard. 2011 \textit{Open Document Format for Office Applications (OpenDocument) Version 1.2.} [ONLINE]. Available at: \textit{http://docs.oasis-open.org/office/v1.2/OpenDocument-v1.2.html.} [Accessed 19 September 2016]
-	\bibitem{rfc7159} T. Bray, Ed. 2014 \textit{The JavaScript Object Notation (JSON) Data Interchange Format} [ONLINE].\\ Available at: 	\textit{https://tools.ietf.org/rfc/rfc7159.txt} [Accessed 30 October 2016]
-	\bibitem{rfc4122} P. Leach, Microsoft, M. Mealling, Refactored Networks, LLC, R. Salz, DataPower Technology, Inc.  2005 \textit{The JavaScript Object Notation (JSON) Data Interchange Format} [ONLINE].\\ Available at: \textit{https://tools.ietf.org/rfc/rfc4122.txt} [Accessed 30 October 2016]
-	\bibitem{hashcat}\textit{hashcat - advanced password recovery.} [ONLINE].
-Available at: \\ \textit{https://hashcat.net/hashcat/.} [Accessed 30 October 2016]
-	\bibitem{jtr}\textit{John the Ripper password cracker.} [ONLINE].
-Available at: \\ \textit{http://www.openwall.com/john/.} [Accessed 30 October 2016]
-	\bibitem{openssl}OpenSSL Software Foundation. 2016 \textit{Welcome to OpenSSL!.} [ONLINE].
-Available at: \\ \textit{https://www.openssl.org/.} [Accessed 30 October 2016]
-\end{thebibliography}
-
-
-
-
+\bibliography{thesis} 
+\bibliographystyle{ieeetr}
 
 \begin{appendix}
 	\chapter{Attachements}
-	\section{[MS-OFFCRYPTO] Structures and Schemas}\label{msoffcrypto_structs}
-	\subparagraph{EncryptionInfo Stream (Standard Encryption)}\label{ei_standardstream}
-
-	\subparagraph{EncryptionInfo Stream (Agile Encryption)}\label{ei_agilestream}.
+	\section{[MS-OFFCRYPTO] Structures and Schemas}
+	\textbf{EncryptionInfo Stream (Agile Encryption) Schema}\label{ei_agile_stream}
+	\begin{lstlisting}
+<?xml version="1.0" encoding="utf-8"?>
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified"
+    targetNamespace="http://schemas.microsoft.com/office/2006/encryption"
+    xmlns="http://schemas.microsoft.com/office/2006/encryption"
+    xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:simpleType name="ST_SaltSize">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:minInclusive value="1" />
+      <xs:maxInclusive value="65536" />
+    </xs:restriction> 
+  </xs:simpleType> 
+  <xs:simpleType name="ST_BlockSize">
+    <xs:restriction base="xs:unsignedInt">
+      <xs:minInclusive value="2" /> 
+      <xs:maxInclusive value="4096" />
+    </xs:restriction> 
+  </xs:simpleType> 
+  <xs:simpleType name="ST_KeyBits"> 
+    <xs:restriction base="xs:unsignedInt"> 
+      <xs:minInclusive value="8" /> 
+    </xs:restriction> 
+  </xs:simpleType> 
+  <xs:simpleType name="ST_HashSize"> 
+    <xs:restriction base="xs:unsignedInt">
+      <xs:minInclusive value="1" /> 
+      <xs:maxInclusive value="65536" /> 
+    </xs:restriction> 
+  </xs:simpleType> 
+  <xs:simpleType name="ST_SpinCount"> 
+    <xs:restriction base="xs:unsignedInt"> 
+      <xs:minInclusive value="0" /> 
+      <xs:maxInclusive value="10000000" /> 
+    </xs:restriction>
+  </xs:simpleType> 
+  <xs:simpleType name="ST_CipherAlgorithm"> 
+    <xs:restriction base="xs:string"> 
+      <xs:minLength value="1" /> 
+    </xs:restriction> 
+  </xs:simpleType>
+  <xs:simpleType name="ST_CipherChaining"> 
+    <xs:restriction base="xs:string"> 
+      <xs:minLength value="1" /> 
+    </xs:restriction> 
+  </xs:simpleType> 
+  <xs:simpleType name="ST_HashAlgorithm"> 
+    <xs:restriction base="xs:string"> 
+      <xs:minLength value="1" /> 
+    </xs:restriction> 
+  </xs:simpleType>
+  <xs:complexType name="CT_KeyData"> 
+    <xs:attribute name="saltSize" type="ST_SaltSize" 
+       use="required" /> 
+    <xs:attribute name="blockSize" type="ST_BlockSize"
+       use="required" /> 
+    <xs:attribute name="keyBits" type="ST_KeyBits"
+       use="required" /> 
+    <xs:attribute name="hashSize" type="ST_HashSize"
+       use="required" /> 
+    <xs:attribute name="cipherAlgorithm" 
+       type="ST_CipherAlgorithm" use="required" /> 
+    <xs:attribute name="cipherChaining"
+       type="ST_CipherChaining" use="required" /> 
+    <xs:attribute name="hashAlgorithm" type="ST_HashAlgorithm"
+       use="required" /> 
+    <xs:attribute name="saltValue" type="xs:base64Binary" 
+       use="required" /> 
+  </xs:complexType>
+  <xs:complexType name="CT_DataIntegrity"> 
+    <xs:attribute name="encryptedHmacKey" 
+                  type="xs:base64Binary" use="required" /> 
+    <xs:attribute name="encryptedHmacValue" 
+                  type="xs:base64Binary" use="required" /> 
+  </xs:complexType>
+  <xs:complexType name="CT_KeyEncryptor"> 
+    <xs:sequence>
+      <xs:any processContents="lax" /> 
+    </xs:sequence>
+    <xs:attribute name="uri" type="xs:token" /> 
+  </xs:complexType>
+  <xs:complexType name="CT_KeyEncryptors"> 
+    <xs:sequence>
+      <xs:element name="keyEncryptor" type="CT_KeyEncryptor" minOccurs="1" maxOccurs="unbounded" /> 
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="CT_Encryption"> 
+    <xs:sequence>
+      <xs:element name="keyData" type="CT_KeyData" 
+          minOccurs="1" maxOccurs="1" /> 
+      <xs:element name="dataIntegrity" type="CT_DataIntegrity" 
+          minOccurs="0" maxOccurs="1" /> 
+      <xs:element name="keyEncryptors" type="CT_KeyEncryptors"
+          minOccurs="1" maxOccurs="1" /> 
+    </xs:sequence>
+  </xs:complexType>
+  <xs:element name="encryption" type="CT_Encryption" /> 
+</xs:schema>
+	\end{lstlisting}
+\textbf{PasswordKeyEncryptor Schema}\label{ei_password_encryptor}
+	\begin{lstlisting}
+<?xml version="1.0" encoding="utf-8"?>
+  <xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" targetNamespace="http://schemas.microsoft.com/office/2006/keyEncryptor/password" xmlns="http://schemas.microsoft.com/office/2006/keyEncryptor/password" xmlns:e="http://schemas.microsoft.com/office/2006/encryption" xmlns:xs="http://www.w3.org/2001/XMLSchema"> 
+  <xs:import namespace="http://schemas.microsoft.com/office/2006/encryption" schemaLocation="encryptionInfo.xsd" /> 
+  <xs:simpleType name="ST_PasswordKeyEncryptorUri"> 
+    <xs:restriction base="xs:token">
+      <xs:enumeration value="http://schemas.microsoft.com/office/2006/keyEncryptor/password" />
+    </xs:restriction>
+  </xs:simpleType> 
+  <xs:complexType name="CT_PasswordKeyEncryptor">
+    <xs:attribute name="saltSize" type="e:ST_SaltSize" 
+       use="required" />
+    <xs:attribute name="blockSize" type="e:ST_BlockSize" 
+       use="required" /> 
+    <xs:attribute name="keyBits" type="e:ST_KeyBits" 
+       use="required" />
+    <xs:attribute name="hashSize" type="e:ST_HashSize" 
+       use="required" /> 
+    <xs:attribute name="cipherAlgorithm" 
+       type="e:ST_CipherAlgorithm" use="required" /> 
+    <xs:attribute name="cipherChaining"
+       type="e:ST_CipherChaining" use="required" /> 
+    <xs:attribute name="hashAlgorithm" 
+       type="e:ST_HashAlgorithm" use="required" /> 
+    <xs:attribute name="saltValue" type="xs:base64Binary" 
+       use="required" /> 
+    <xs:attribute name="spinCount" type="e:ST_SpinCount"
+       use="required" />
+    <xs:attribute name="encryptedVerifierHashInput"
+       type="xs:base64Binary" use="required" /> 
+    <xs:attribute name="encryptedVerifierHashValue"
+       type="xs:base64Binary" use="required" />
+    <xs:attribute name="encryptedKeyValue"
+       type="xs:base64Binary" use="required" />
+  </xs:complexType> 
+  <xs:element name="encryptedKey" 
+       type="CT_PasswordKeyEncryptor" />
+</xs:schema>
+	\end{lstlisting}
 \end{appendix}
 \end{document}
 
