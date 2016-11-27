@@ -30,7 +30,7 @@
             plainpages=false,
             pdfpagelabels,
 	 pdftitle={Security analysis of document protections},
-            pdfauthor={Martin Bajanik},
+            pdfauthor={Bc. Martin Bajanik},
             colorlinks=true,
             linkcolor=black, 
             citecolor=black,
@@ -38,7 +38,7 @@
 
 \thesistitle{Security analysis of document protections} % enter thesis title
 \thesissubtitle{Master's thesis}
-\thesisstudent{Martin Bajaník} % name of the author
+\thesisstudent{Bc. Martin Bajaník} % name of the author
 \thesiswoman{false} % defines author's gender
 \thesisfaculty{fi}
 \thesisyear{autumn 2014}
@@ -299,12 +299,12 @@ Both are applicable for binary documents. ECMA-376 documents use the Xmldsig Dig
 
 \subsection{CryptoAPI Digital Signature} 
 
-A digitally signed binary document must contain a stream named "\_signatures". This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
+A digitally signed binary document must contain a stream named ‘\_signatures’ . This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
 
 
 \subsection{Xmldsig Digital Signature}
 
-Xmldsig Digital Signatures are stored as a stream in the "\_xmlsignatures" folder. Every document can have one or more signatures. Signatures are stored separately. A single signature is represented as specified by W3C in XML Signature Syntax and Processing \cite{xmlsig}. XML Advanced Electronic Signatures \cite{xades} extensions are also allowed.
+Xmldsig Digital Signatures are stored as a stream in the ‘\_xmlsignatures’ folder. Every document can have one or more signatures. Signatures are stored separately. A single signature is represented as specified by W3C in XML Signature Syntax and Processing \cite{xmlsig}. XML Advanced Electronic Signatures \cite{xades} extensions are also allowed.
 
 Office 2007 and above use Xmldsig digital signatures by default. This is true for both binary documents and ECMA-376 documents. In Office 2007 signed document parts are hashed using SHA-1. Note that it is the only supported hash algorithm. Higher versions can use any hash algorithm that is supported by the underlying operating system. As an example Office 2013 uses SHA-256.
 
@@ -440,7 +440,7 @@ In revision 5 all algorithms previously mentioned were completely replaced. Two 
 
 The maximum password length was extended from 32 bytes to 127 bytes. As mentioned before the U and O entries were extended to 48 bytes and represent 3 logical parts. The first 32 bytes are a verification hash. The next 8 bytes are a validation salt. The last 8 bytes are a key salt. The OE and UE values contain the file encryption key encrypted by the an owner-password-based or user-password-based key respectively.
 
-At this point the publicly available supplement to the ISO 32000 \cite{iso32000sup} appears to be incomplete in terms of the file's encryption key computation. A new "Computing an encryption key" algorithm is described. This algorithm includes a step where decrypting the OE, or UE, value is necessary to get the file encryption key. Algorithms to generate the OE and UE values include a step where encrypting the file encryption key is necessary. However, the origin of the file encryption key is not mentioned. 
+At this point the publicly available supplement to the ISO 32000 \cite{iso32000sup} appears to be incomplete in terms of the file's encryption key computation. A new ‘Computing an encryption key’ algorithm is described. This algorithm includes a step where decrypting the OE, or UE, value is necessary to get the file encryption key. Algorithms to generate the OE and UE values include a step where encrypting the file encryption key is necessary. However, the origin of the file encryption key is not mentioned. 
 
 The process of password verification is straightforward:
 
@@ -468,10 +468,10 @@ Documents in the Open Document Format can be represented in two ways \cite{odt_s
 \begin{itemize}
 \setlength\itemsep{0.1em}
 \item{A single XML document.}
-\item{A collection of files within a package, each of which stores a part of the document.}
+\item{A collection of files within a package, each of which stores a portion of the document.}
 \end{itemize}
 
-Particularly important in context of this paper is the latter way mentioned. All protection mechanisms defined apply to packages. A package representing a single Open Document Format file will be referred to as “ODT package” from now on.
+Particularly important in the context of this paper is the second method. All protection mechanisms defined apply to packages. A package representing a single Open Document Format file will be referred to as ‘ODT package’ from this point forward.
 
 \section{Encryption}\label{odt_enc}
 
@@ -480,12 +480,12 @@ The encryption process as specified in Open Document Format for Office Applicati
 \begin{enumerate}
 \setlength\itemsep{0.1em}
 	\item{The user-supplied password is hashed.}
-	\item{For each file to be encrypted a separate key is generated using the hashed password and the PBKDF2 algorithm \cite{rfc2898}.}
+	\item{For each file to be encrypted, a separate key is generated using the hashed password and the PBKDF2 algorithm \cite{rfc2898}.}
 	\item{The files are encrypted using the keys created in step 2.}
 \end{enumerate}
 
 The exact algorithms and other necessary cryptographic parameters are defined in the document's manifest. The manifest is a mandatory part of every ODT package and its relative path within the package must be \texttt{META-INF/}
-\texttt{manifest.xml}. The manifest is an XML file conforming the XML schema shown in Appendix B.
+\texttt{manifest.xml}. The manifest is an XML file conforming to the XML schema shown in Appendix B.
 
 For every file in the ODT package the manifest must contain an element denoted as \texttt{<manifest:file-entry>}.
 
@@ -497,25 +497,25 @@ For every file in the ODT package the manifest must contain an element denoted a
 \end{figure}
 
 A \texttt{<manifest:encryption-data>} child element indicates that the file is stored encrypted within the package. It also contains information required to decrypt the particular file. The attribute \texttt{manifest:checksum-type} specifies a digest algorithm used to calculate a hash of the file. This hash is stored in the \texttt{manifest:checksum} attribute in BASE64 encoding. 
-The algorithm used to encrypt a file is specified in the \texttt{manifest:algorithm-name} attribute of the \texttt{<manifest:algorithm>} element. In case this algorithm requires an initialization vector it is specified in the \texttt{manifest:initialization-vector} attribute.
-In a similar fashion the elements \texttt{<manifest:key-derivation>} and \texttt{<manifest:start-key generation>} specify how the start key is generated from the user password and how the encryption key is derived from the start key, respectively.
-All algorithms that can be used for the purposes discussed in this section and should be supported by implementations are listed in the Open Document Format specification. New algorithms were added as the specification was extended over time. 
+The algorithm used to encrypt a file is specified in the \texttt{manifest:algorithm-name} attribute of the \texttt{<manifest:algorithm>} element. If the algorithm requires an initialization vector, then it is specified in the \texttt{manifest:initialization-vector} attribute.
+In a similar fashion, the elements \texttt{<manifest:key-derivation>} and \texttt{<manifest:start-key generation>} specify how the start key is generated from the user password and how the encryption key is derived from the start key, respectively.
+All algorithms that can be used for the purposes discussed in this section, and which should be supported by implementations, are listed in the Open Document Format specification. New algorithms were added as the specification was extended over time. 
 
-Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{manifest:checksum-type} and \texttt{manifest:start-key-generation-name} attributes. The only available \texttt{manifest:algorithm-name} was Blowfish in CFB mode. Version 1.2 introduced support for additional hash functions and algorithms: SHA-256, SHA-512, RIPEMD-160, 3DES, AES-128, AES-256 and AES-192. The only available key generation algorithm in all three versions is PBKDF2.
+Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{manifest:checksum-type} and \texttt{manifest:start-key-generation-name} attributes. The only available \texttt{manifest:algorithm-name} was Blowfish in CFB mode. Version 1.2 introduced support for additional hash functions and algorithms: SHA-256, SHA-512, RIPEMD-160, 3DES, AES-128, AES-256, and AES-192. The only available key generation algorithm in all three versions is PBKDF2.
 
 \section{Digital Signatures}
 
-Digital signatures are defined beginning with version 1.2. One package may contain more signatures. The signatures are located within the \texttt{META-INF/} folder and should contain the term "signature" in their name. Every signature has to explicitly list all files which are being validated. In particular to ensure integrity of the whole document, all files should be referenced by some signature. 
+Digital signatures have been defined ever since version 1.2. One package may contain multiple signatures. The signatures are located within the \texttt{META-INF/} folder and should contain the term ‘signature’  in their name. Every signature has to explicitly list all files that are being validated. In particular, all files should be referenced by some signature to ensure the integrity of the entire document.
 
-The Open Document Format specification describes that digital signature can be used together with encrypted packages in two ways. The signature can be applied on encrypted files and should be validated prior to decrypting the package. The other option is digitally signing the package before encrypting it. This approach will also encrypt the files containing digital signatures.  
+The Open Document Format specification describes that digital signature can be used together with encrypted packages in two ways. The signature can be applied to encrypted files and should be validated prior to decrypting the package. The other option is digitally signing the package before encrypting it. This approach will also encrypt the files containing digital signatures.  
 
-However, popular implementations seem to only support the first mentioned approach. Once a digitally signed file is encrypted, they will remove all signatures before encrypting the file. The file has to be manually resigned again. 
+However, popular implementations seem to only support the first-mentioned approach. Once a digitally signed file is encrypted, all signatures are removed before encrypting the file. The file has to be manually re-signed again.
 
 \section{Summary}
 
-Protections described in the Open Document Format are rather simple and unambiguous. Focus on security can be seen looking at differences of various versions. Version 1.2 introduced a mechanism for digital signatures as well as support for modern cryptographic functions. The use of PBKDF2 with configurable iteration count allows mitigating simple offline brute-force attacks. However, GPU powered attacks may become extremely successful as PBKDF2 is not designed to be memory-hard \cite{PBKDF2_attack}.
+Protections described in the Open Document Format are rather simple and unambiguous. Focus on security can be seen when looking at differences of various versions. Version 1.2 introduced a mechanism for digital signatures as well as support for modern cryptographic functions. The use of PBKDF2 with configurable iteration count allows for the mitigation of simple offline brute-force attacks. However, GPU powered attacks may become extremely successful as PBKDF2 is not designed to be memory-hard \cite{PBKDF2_attack}.
 
-Two popular implementations have been tested: LibreOffice \cite{libreoffice} and Apache OpenOffice \cite{openoffice}. Both application were used in the latest available stable version at the time. For Libre Office this was version 5.2.2 and for Open Office version 4.1.3. On overview of the results is shown in table \ref{odt_impl_results}.
+Two popular implementations have been tested: LibreOffice \cite{libreoffice} and Apache OpenOffice \cite{openoffice}. Both applications were used in the latest stable version released at the time - for LibreOffice this was version 5.2.2 and for OpenOffice version 4.1.3. An overview of the results is shown in table \ref{odt_impl_results}.
 
 \begin{table}[h]
 	\centering
@@ -537,13 +537,13 @@ Two popular implementations have been tested: LibreOffice \cite{libreoffice} and
 	\label{odt_impl_results}
 \end{table}
 
-Both applications encrypt all files in the package. Similarly both applications include all files when applying a digital signature to the document. A particular interesting finding is that Open Office prefers the Blowfish algorithm to encrypt documents.
+Both applications encrypt all files in the package. Similarly, both applications include all files when applying a digital signature to the document. A particularly interesting finding is that Open Office prefers the Blowfish algorithm for encrypting documents.
 
 \chapter{Distributed Password Recovery}
 
-As people tend to forget passwords, it is likely, that access to password protected documents can be lost. A straight-forward solution in this case is brute-force, as password verification is done offline. To show and further discuss the speed and efficiency of this process a distributed password recovery system was created.
+As people tend to forget passwords, it is likely that access to password-protected documents can be lost. A straightforward solution in this case is brute-force, as password verification is done offline. To show and further discuss the speed and efficiency of this process, a distributed password recovery system was created.
 
-The whole implementation and any files mentioned in this chapter can be found on the attached CD or in the official thesis archive available at \textit{http://is.muni.cz/}.
+The implementation and any files mentioned in this chapter can be found on the attached CD or in the official thesis archive available at \textit{http://is.muni.cz/}.
 
 \section{System Overview}
 
@@ -565,7 +565,7 @@ The input for the system is a password protected Office, PDF or ODT document. As
 	\item{Open Document Format – version 1.2 using AES-256 (as described in subsection \ref{odt_enc}).}
 \end{itemize}
 
-The basic idea is that the server part serves as the main entry point for the user and handles all additional work. It utilizes a document parser to gather information necessary for password verification and distributes work among all active clients. A more detailed description of every part follows. 
+The basic idea is that the server part acts as the main entry point for the user and handles all additional work. It utilizes a document parser to gather information necessary for password verification and distributes work among all active clients. A more detailed description of every part follows. 
 
 \subsection{Client-server model}\label{client-server}
 
@@ -597,17 +597,17 @@ Note that the current version must be run with Python 2.7 in order to function p
 	\item{\textbf{tcp\_ip, tcp\_port} --  IP address and port number to which clients should connect in order to communicate with the server.}
 \end{itemize}\label{server_params}
 
-When run, the server extracts all information necessary to perform the password recovery process. This is accomplished by calling one of the document parsers described in subsection \ref{doc_parsers}. Afterwards the server is passively waiting for clients to connect. Once connected the server sends the verification data and a list of passwords in JSON \cite{rfc7159} format:
+When run, the server extracts all information necessary to perform the password recovery process. This is accomplished by calling one of the document parsers described in subsection \ref{doc_parsers}. Afterwards the server passively waits for clients to connect. Once connected, the server sends the verification data and a list of passwords in JSON \cite{rfc7159} format:
 
 \begin{lstlisting} 
 {"passwords":[<passwords>], "data":"<document_parser_output>"}
 \end{lstlisting}\label{server_message}
 
-Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
+Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption, the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
 
-A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value the time interval between two messages exchanged between a client and the server might be very high (even days). This is because, the client will ask for a new list of passwords after it successfully verifies all the passwords it received. To recognize inactive clients (e.g. the client machine was terminated etc.) a hearth beat mechanism is implemented. Every 20 seconds a small message (hearth beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 second will be marked as inactive. In case the client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically an unlimited linear growth in performance. The server keeps track of what passwords were sent to which client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive all passwords that were currently processed by it are eventually resend to another client. 
+A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value, the time interval between two messages exchanged between a client and the server might be very high (even days). This is because the client will ask for a new list of passwords after it successfully verifies all the passwords it has received. To recognize inactive clients (e.g., the client machine was terminated, etc.) a heart beat mechanism is implemented. Every 20 seconds, a small message (heart beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 seconds will be marked as inactive. In the event a client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically for an unlimited linear growth in performance. The server keeps track of what passwords were sent to which client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive, all passwords that were currently processed by it are eventually resent to another client. 
 
-On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is represented by the number of tried passwords per second. The speed is naively computed as the ratio of the elapsed time and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shutdown in case it receives the correct password from a client.
+On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is represented by the number of tried passwords per second. The speed is naïvely computed as the ratio of the elapsed time and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shut down when it receives the correct password from a client.
 
 The client can be run using the following command:
 \begin{lstlisting}
@@ -616,21 +616,21 @@ $ python client.py [-h] tcp_ip tcp_port
 
 The \textit{tcp\_ip} and \textit{tcp\_port} are the connection parameters used to communicate with the server. The optional \textit{–h} argument will show a descriptive help message. 
 
-Once run, the client generates a UUID and immediately sends a message to the server asking for a password list and the verification data. This information is then passed to the brute-force engine described in subsection \ref{brute_force_engine}. The actual brute-forcing is separated from the client on purpose. The reason for this is to keep the system as modular as possible. It is important to note that this approach allows any brute-force engine to be used (e.g. hashcat or JtR \cite{hashcat, jtr} described in more detail in section \ref{related_work}). When done the result is sent to the server. In case the password was not found, the client will receive a new password list and repeat the whole process.
+Once run, the client generates a UUID and immediately sends a message to the server asking for a password list and any verification data. This information is then passed to the brute-force engine described in subsection \ref{brute_force_engine}. The actual brute-forcing is separated from the client on purpose. The reason for this is to keep the system as modular as possible. It is important to note that this approach allows any brute-force engine to be used (e.g., hashcat or JtR \cite{hashcat, jtr} described in more detail in section \ref{related_work}). Once complete, the result is sent to the server. In the event the password was not found, the client will receive a new password list and repeat the whole process.
 
 \subsection{Document parsers} \label{doc_parsers}
 
-The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODT files was implemented as part of this thesis. The parser accepts as valid input ODT files conforming the latest specification (version 1.2).
+The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODT files was implemented as part of this thesis. The parser accepts as valid input, ODT files conforming to the latest specifications (version 1.2).
 
 \subsection{Brute-force engine}\label{brute_force_engine}
 
-The brute-force engine can be used either as a stand-alone Python script providing a simple command line interface, or as a Python module. When run separately it can be started using the following command:
+The brute-force engine can be used either as a stand-alone Python script providing a simple command line interface, or as a Python module. When run separate,ly it can be started using the following command:
 
 \begin{lstlisting}
 $ python brute_force.py [-h] [-pr PASSWORDRANGE] document_type filename
 \end{lstlisting}
 
-All the parameters correspond to the identically named parameters described in subsection \ref{server_params}. Once the engine is invoked this way, it parses the given document and initializes a password range based brute-force process. Passwords are generated and placed in a synchronized queue in a separate process. The passwords in the queue are being pulled one by one and verified using a \textit{password verifier}. There are 3 separate verifiers for the supported documents respectively. All three verifiers are written in plain C and the script utilizes Python's multiprocessing module to invoke more instances simultaneously. C was chosen for performance reasons, as it was shown that a plain rewrite from Python to C speeded up the verification process by approximately 4 times. The code snippet below shows the methods responsible for calling these verifiers.
+All the parameters correspond to the identically named parameters described in subsection \ref{server_params}. Once the engine is invoked this way, it parses the given document and initializes a password range based brute-force process. Passwords are generated and placed in a synchronized queue in a separate process. The passwords in the queue are being pulled one by one and verified using a \textit{password verifier}. There are 3 separate verifiers for the supported documents, respectively. All three verifiers are written in plain C and the script utilizes Python's multiprocessing module to invoke more instances simultaneously. C was chosen for performance reasons, as it was shown that a plain rewrite from Python to C sped up the verification process by approximately 4 times. The code snippet below shows the methods responsible for calling these verifiers.
 
 \begin{lstlisting}
 def _call_msoffcrypto_core(pwd, input_data):
@@ -671,9 +671,9 @@ def _call_pdf_core(pwd, input_data):
 \end{lstlisting}
 
 
-In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them it is necessary to add a link to the library (i.e. using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
+In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them, it is necessary to add a link to the library (i.e., using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
 
-Additionally the script provides a public \textit{init()} method, which requires either a password range or a list of passwords as an argument. If a password range is given the script generates its own list. This is done using a naive generator which generates all possible variations of words consisting of lower case letters up to the given range. As an example, if the specified range is 2 then the resulting generated word list contains the characters 'a' to 'z' and words 'aa' to 'zz'. Otherwise the provided list of passwords is directly placed in a synchronized processing queue. The second approach is used in the client-server model discussed in subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can in general be more efficient then plain brute-forcing of passwords, resulting in a faster password recovery.
+Additionally, the script provides a public \textit{init()} method that, requires either a password range or a list of passwords as an argument. If a password range is given, then the script generates its own list. This is done using a naïve generator, which generates all possible variations of words consisting of lower case letters up to the given range. As an example, if the specified range is 2, then the resulting generated word list contains the characters ‘a’  to ‘z’ and words ‘aa’ to ‘zz’. Otherwise, the provided list of passwords is directly placed into a synchronized processing queue. The second approach is used in the client-server model discussed in subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can, in general, be more efficient than plain brute-forcing of passwords, which can in turn result in a faster password recovery.
 
 \section{Related Work}\label{related_work}
 

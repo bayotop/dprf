@@ -96,3 +96,5 @@ ENV/
 *.gz
 *.toc
 doc/thesis.pdf
+*.bbl
+doc/thesis.blg
