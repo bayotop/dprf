@@ -230,9 +230,9 @@ To understand how the password key encryptor is generated, it is necessary to de
 	\item{\textbf{encryptedKeyValue} -- a random array of bytes encrypted using a key derived from the user-supplied password and a fixed \textit{blockKey}: $0x14, 0x6e, 0x0b, 0xe7, 0xab, 0xac, 0xd0, 0xd6$. This element represents the intermediate key.}
 \end{itemize}
 
-Nota that the intermediate key, used to encrypt the plain-text content of the documents, is randomly generated. Unlike in standard encryption where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a cryptographically secure pseudo-random number generator (CSPRNG), then an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
+Note that the intermediate key, used to encrypt the plain-text content of the documents, is randomly generated. Unlike in standard encryption, where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a cryptographically secure pseudo-random number generator (CSPRNG), then an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
 
-In addition to confidentiality, agile encryption also provides a way to verify integrity of encrypted files. The verification is done using the \textit{encryptedHmacKey} and \textit{encryptedHmacValue} attributes of the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this attributes is as follows:
+In addition to confidentiality, agile encryption also provides a way to verify integrity of encrypted files. Verification is done using the \textit{encryptedHmacKey} and \textit{encryptedHmacValue} attributes of the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this attributes is as follows:
 
 \begin{enumerate}
 \setlength\itemsep{0.1em}
@@ -285,11 +285,11 @@ Documents represented in a binary format that are intended to be compatible with
 \item{$H_{99,999}$ becomes the resulting hash.}
 \end{enumerate}
 
-Note that the iteration count and hashing function are configurable. This approach helps to protect the user-specified password when the document itself gets leaked to unathorized users. However, removing the whole hash entry from the file will effectively remove the write protection.
+Note that the iteration count and hashing function are configurable. This approach helps to protect the user-specified password when the document itself gets leaked to unauthorized users. However, removing the whole hash entry from the file will effectively remove the write protection.
 
 \section{Digital Signatures}\label{data_integrity}
 
-Similarly to write protection and encryption, digital signatures are different between binary Office documents and Office documents represented as specified in ECMA-376. There are to digital signature formats:
+Similarly to write protection and encryption, digital signatures are different between binary Office documents and Office documents represented as specified in ECMA-376. There are two digital signature formats:
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
@@ -301,20 +301,20 @@ Both are applicable for binary documents. ECMA-376 documents use the Xmldsig Dig
 
 \subsection{CryptoAPI Digital Signature} 
 
-A digitally signed binary document must contain a stream named ‘\_signatures’ . This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
+A digitally signed binary document must contain a stream named \textit{\_signatures} . This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
 
 
 \subsection{Xmldsig Digital Signature}
 
-Xmldsig Digital Signatures are stored as a stream in the ‘\_xmlsignatures’ folder. Every document can have one or more signatures. Signatures are stored separately. A single signature is represented as specified by W3C in XML Signature Syntax and Processing \cite{xmlsig}. XML Advanced Electronic Signatures \cite{xades} extensions are also allowed.
+Xmldsig Digital Signatures are stored as a stream in the \textit{\_xmlsignatures} folder. Every document can have one or more signatures. Signatures are stored separately. A single signature is represented as specified by W3C in XML Signature Syntax and Processing \cite{xmlsig}. XML Advanced Electronic Signatures \cite{xades} extensions are also allowed.
 
-Office 2007 and above use Xmldsig digital signatures by default. This is true for both binary documents and ECMA-376 documents. In Office 2007 signed document parts are hashed using SHA-1. Note that it is the only supported hash algorithm. Higher versions can use any hash algorithm that is supported by the underlying operating system. As an example Office 2013 uses SHA-256.
+Xmldsig digital signatures are used in Office 2007 and above by default. This is true for both binary documents and ECMA-376 documents. In Office 2007 signed document parts are hashed using SHA-1. Note that it is the only supported hash algorithm. Higher versions can use any hash algorithm that is supported by the underlying operating system. As an example Office 2013 uses SHA-256.
 
 \section{Summary}
 
 The structure of MS Office documents is very complex and changed heavily over time. Major differences can be seen between documents represented as specified by ECMA-376 and binary representation. ECMA-376 encryption methods are evolving over time, to reflect current trends and provide protection from modern threads. For example the default encryption mode changed from ECB to CBC and a whole new element providing data integrity was introduced. Binary protection methods, such as XOR obfuscation or 40-bit RC4 encryption, are out dated and do not provide sufficient level of security. However, this is clearly stated directly by the specification \cite[p. 93]{msoffcrypto}. Similarly, when using agile encryption or extensible encryption, use of modern hashing and encryption algorithms is explicitly recommended.
 
-Passwords used for write protection are strongly protected. This is very important as people are used to reuse passwords commonly. Storing any kind of user-defined passwords inside the document structure in hashed form is definetly reasonable and correct. Of course, the hashing process should be intentionally slow to stop determined attackers. Write protection itself is not considered to be a security mechanism. It can be always bypassed. 
+Passwords used for write protection are strongly protected. This is very important as people are used to reuse passwords commonly. Storing any kind of user-defined passwords inside the document structure in hashed form is definitely reasonable and correct. Of course, the hashing process should be intentionally slow to stop determined attackers. Write protection itself is not considered to be a security mechanism. It can be always bypassed. 
 
 Digital signatures provide confirmation that the document's content originated from the signer and has not been altered with. Implementation of digital signatures is straightforward and based on common standards XML Signature Syntax and Processing \cite{xmlsig} and XML Advanced Electronic Signatures \cite{xades}. 
 
@@ -336,7 +336,7 @@ The focus is on differences between various versions and how the protections evo
 
 The encryption mechanism was introduced in PDF version 1.1. All encryption related information is stored in the document's trailer dictionary \cite[p. 42]{pdf_spec} within an encryption dictionary. The presence of the encryption dictionary implies that the document is encrypted.
 
-Every encryption dictionary is required to specify the name of the preferred security handler for the document. The handler is a software module that implements aspects of the encryption process and controls access to the contents of an encrypted document. A standard password-based security handler is defined directly by the PDF specification. All algorithms discussed further in this chapter are specific for this standard security handler. It is important to note that while working on this thesis various tools where used to create PDF files and all these files implemented only the standard handler.
+Every encryption dictionary is required to specify the name of the preferred security handler for the document. The handler is a software module that implements aspects of the encryption process and controls access to the contents of an encrypted document. A standard password-based security handler and a public-key security handler are defined directly by the PDF specification. All algorithms discussed further in this chapter are specific for these standard security handlers.
 
 \subsection{Standard Security Handler}\label{pdf_enc}
 
@@ -448,9 +448,9 @@ In revision 5 all algorithms previously mentioned were completely replaced. Two 
 	\label{additional_handler_entries}
 \end{table}
 
-The maximum password length was extended from 32 bytes to 127 bytes. As mentioned before the U and O entries were extended to 48 bytes and represent 3 logical parts. The first 32 bytes are a verification hash. The next 8 bytes are a validation salt. The last 8 bytes are a key salt. The OE and UE values contain the file encryption key encrypted by the an owner-password-based or user-password-based key respectively.
+The maximum password length was extended from 32 bytes to 127 bytes. As mentioned before the U and O entries were extended to 48 bytes and represent 3 logical parts. The first 32 bytes are a verification hash. The next 8 bytes are a validation salt. The last 8 bytes are a key salt. The OE and UE values contain the file encryption key encrypted by an owner-password-based or user-password-based key, respectively.
 
-At this point the publicly available supplement to the ISO 32000 \cite{iso32000sup} appears to be incomplete in terms of the file's encryption key computation. A new ‘Computing an encryption key’ algorithm is described. This algorithm includes a step where decrypting the OE, or UE, value is necessary to get the file encryption key. Algorithms to generate the OE and UE values include a step where encrypting the file encryption key is necessary. However, the origin of the file encryption key is not mentioned. 
+At this point the publicly available supplement to the ISO 32000 \cite{iso32000sup} appears to be incomplete in terms of the file's encryption key computation. A new \textit{Computing an encryption key} algorithm is described. This algorithm includes a step where decrypting the OE, or UE, value is necessary to get the file encryption key. Algorithms to generate the OE and UE values include a step where encrypting the file encryption key is necessary. However, the origin of the file encryption key is not mentioned. 
 
 The process of password verification is straightforward:
 
@@ -467,11 +467,85 @@ An interesting observation can be seen after describing the way of verifying a p
 
 Algorithms mentioned up to this point, are all publicly available and documented directly by Adobe. However, PDF files using a standard security handler of revision 6 are generated when using Adobe Acrobat Pro X or higher. A quick look at the preview of \textit{ISO/DIS 32000-2.4 Document management -- Portable document format -- Part 2: PDF 2.0} reveals that indeed standard security handlers of revision 6 and higher are mentioned. However, it is possible to find the actual key verification algorithm publicly on the Internet \cite{esec-lab}. The algorithm is similar to the algorithm used by security handlers of revision 5. It adds a minimum of 32 rounds of obscure AES-128 encryption followed by SHA-2 hashing.
 
-\section{Watermark Annotations}
+\subsection{Public-Key Security Handlers}
 
-\section{Signature Fields}
+In addition to password-based encryption, security handlers may use asymmetric encryption. Instead of specifying a password, it is necessary to specify one or more  lists of recipients. Every such list can have different access permissions specified. 
+
+When encrypting a document using a public-key security handler, each recipient's X.509 public certificate part must be available. When opening such a protected document, the recipient has to provide the corresponding private key.
+
+A public-key encryption dictionary is mostly similar to a password-based encryption dictionary. It contains one extra field named \textit{Recipients}. It represents an array of lists of recipients. Within one list all recipients have the same access permissions. 
+
+Figure \ref{public_key_alg} illustrates the process of decrypting a protected PDF file using a standard public-key security handler.
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=1\textwidth]{figures/public_key_alg.pdf}
+	\caption{Decryption process when using standard public-key security handlers. Based on \cite[p. 130]{pdf_spec}}
+	\label{public_key_alg}
+\end{figure}
+
+Every recipient list contains a 20-byte seed, which is used to generate the file's encryption key, and a 4-byte value specifying access permissions. The seed should be, according to the specification, a unique random number generated by the security handler. Both the seed and the permissions value are stored within the list in an encrypted manner. The encryption algorithm can be any of the following: 
+
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{RC2 with key lengths up to 128 bits,}
+	\item{RC4 with key length up to 256 bits,}
+	\item{DES, Triple DES,}
+	\item{AES-128-CBC, AES-256-CBC or AES-192-CBC.}
+\end{itemize}
+
+Adobe's Acrobat products use Triple DES by default (all mentioned are supported when decrypting documents). Note that no comments or requirements are given about key generation. Implementation mistakes may lead to a serious vulnerability, if this key is not generated using a CSPRNG. The attacker could learn the value of the seed without actually having a corresponding private key. The key is stored inside the recipient list, encrypted using the recipient's public key. 
+
+Once the seed is known, the file's encryption key can be computed as follows:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+	\item{Compute the SHA-1 hash of the 20-byte seed concatenated with the whole value of the \textit{Recipients} field and 4 bytes with the value $0xFF$ if document metadata is not encrypted.}
+	\item{The first $n$ bytes of the resulting hash become the encryption key, where $n$ is determined by other fields of the encryption dictionary.}
+\end{enumerate}
+
+The above algorithm implies that the length is upper-bounded by the output length of the SHA-1 hashing function -- 20 bytes. The specification indicates that the document will be always encrypted using the RC4 cipher, which makes sense as the key length is limited to 128 bites (16 bytes). This leads to the assumption that a custom public-key security handler is needed to change this behavior.   
+
+\section{Digital Signatures}
+Digital signatures are supported in PDF 1.3 and higher versions. Processing of signatures is implemented by a plug-in signature handler. The PDF specification is explicitly encouraging third-party handler writers to register their handlers with Adobe \cite[p. 725]{pdf_spec}.
+
+The common way to create signatures is to compute a digest of the document (or some part of the document) and store the digest within the same document. To verify a signature the user has to repeat the same process and compare the results. All signature information is stored within a signature dictionary.
+
+Two techniques to compute such digests are defined:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{Computing a \textit{byte range digest} -- the \textit{ByteRange} field of the signature dictionary indicates a range of bytes over which the digest is computed. Typically the range is the entire file.}
+	\item{Computing a \textit{object digest} -- the digest is computed by selectively going through the document's objects, typically beginning with the root object. The exact way to compute the digest is described within the \textit{TransformMethod} and \textit{TransformParams} fields of signature reference dictionary. This technique is available since PDF 1.5.}
+\end{itemize}
+
+Moreover, different types of signatures are defined. The specification mentions \textit{ordinary} signatures, MDP (modification detection and prevention) signatures, usage rights signatures and signatures of FDF files. A brief overview follows:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{\textit{Ordinary signatures} -- computed as a byte range digest described above. It represents a typical signature as known in other document formats.}
+	\item{\textit{MDP signatures} -- enables the author of the document to define what changes are permitted to be made on the signed document, and what changes will invalidate the current signature.}
+	\item{\textit{User rights signatures} -- allows to enable interactive document-based features that are not available in some client applications (e.g. Adobe Reader) by default.}
+	\item{\textit{FDF file signatures} -- a special signature type used in Forms Data Format (FDF) files \cite[p. 710]{pdf_spec}.}
+\end{itemize}
+
+Note that the specification covers the features of each type in very detail. It also specifies interoperability between various signature types, revocation methods and permission handling (similar to access permission discussed in subsection \ref{pdf_enc}, but without the necessity to encrypt the file). PDF's signature features include very complex functionality \cite{acrobat_dig_signatures} and covering them all exceeds the scope of this thesis. An overview of particularly interesting features follows:
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{\textbf{Alternative signature methodologies} -- in addition to digital signatures leveraging asymmetric cryptography, biometric forms of identification, such as fingerprints, handwritten signatures or retinal scans, can be used.}
+	\item{\textbf{Robust algorithm support} -- strong encryption algorithms, like RSA with keys of length up to 4096 bits and hash functions SHA-512 or RIPEMD160 are all supported by signature handlers created by Adobe.}
+	\item{\textbf{Incremental updates} -- changing digitally signed documents, without invalidating the current signatures, is possible. All modifications can be later detected and audited.}
+\end{itemize}
 
 \section{Summary}\label{pdf_summ}
+
+Password-based encryption done by standard security handlers is rather questionable. A shift from older insecure encryption algorithms, like RC4 and MD5, is a step in the right direction. However, the replacement introduced in security handlers of version 4 revision 5 rendered the protection level less secure, in terms of offline brute-force capabilities. As one iteration of SHA-256 hashing reveals the correctness of a given password, it is extremely easy to lunch effective offline attacks. Latest security handlers introduced a more sophisticated way of password derivation leveraging AES encryption. There seems to be no obvious reason not to use common password derivation functions like PBKDF2, which provide comparable benefits even with a low iteration count (see figure \ref{average_speed}). 
+
+A better solution is to use public-key security handlers if offline brute-force attacks are considered a threat. However, this means that the document will be encrypted using RC4, which may lead to attacks leveraging known vulnerabilities in RC4. 
+
+Portable Document Format provides very advanced and extensible mechanism for digital signatures. Support for alternative signature methodologies, incremental updates and robust algorithm support, render it superior compared to other discussed document formats. Adobe also explicitly encourages third parties to register new signature handlers. A further detailed review on digital signatures in PDF and existing implementations of signature handlers may be very educative and useful.  
 
 \chapter{Open Document Format for Office Applications}
 
@@ -483,7 +557,7 @@ Documents in the Open Document Format can be represented in two ways \cite{odt_s
 \item{A collection of files within a package, each of which stores a portion of the document.}
 \end{itemize}
 
-Particularly important in the context of this paper is the second method. All protection mechanisms defined apply to packages. A package representing a single Open Document Format file will be referred to as ‘ODT package’ from this point forward.
+Particularly important in the context of this paper is the second method. All protection mechanisms defined apply to packages. A package representing a single Open Document Format file will be referred to as \textit{ODT package} from this point forward.
 
 \section{Encryption}\label{odt_enc}
 
@@ -517,7 +591,7 @@ Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{m
 
 \section{Digital Signatures}
 
-Digital signatures have been defined ever since version 1.2. One package may contain multiple signatures. The signatures are located within the \texttt{META-INF/} folder and should contain the term ‘signature’  in their name. Every signature has to explicitly list all files that are being validated. In particular, all files should be referenced by some signature to ensure the integrity of the entire document.
+Digital signatures have been defined ever since version 1.2. One package may contain multiple signatures. All signatures are located within the \texttt{META-INF/} folder and should contain the term \textit{signature} in their name. Every signature has to explicitly list all files that are being validated. In particular, all files should be referenced by some signature to ensure the integrity of the entire document.
 
 The Open Document Format specification describes that digital signature can be used together with encrypted packages in two ways. The signature can be applied to encrypted files and should be validated prior to decrypting the package. The other option is digitally signing the package before encrypting it. This approach will also encrypt the files containing digital signatures.  
 
@@ -685,13 +759,13 @@ def _call_pdf_core(pwd, input_data):
 
 In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them, it is necessary to add a link to the library (i.e., using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
 
-Additionally, the script provides a public \textit{init()} method that, requires either a password range or a list of passwords as an argument. If a password range is given, then the script generates its own list. This is done using a naïve generator, which generates all possible variations of words consisting of lower case letters up to the given range. As an example, if the specified range is 2, then the resulting generated word list contains the characters ‘a’  to ‘z’ and words ‘aa’ to ‘zz’. Otherwise, the provided list of passwords is directly placed into a synchronized processing queue. The second approach is used in the client-server model discussed in subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can, in general, be more efficient than plain brute-forcing of passwords, which can in turn result in a faster password recovery.
+Additionally, the script provides a public \textit{init()} method that, requires either a password range or a list of passwords as an argument. If a password range is given, then the script generates its own list. This is done using a naïve generator, which generates all possible variations of words consisting of lower case letters up to the given range. As an example, if the specified range is 2, then the resulting generated word list contains the characters \textit{a} to \textit{z} and words \textit{aa} to \textit{zz}. Otherwise, the provided list of passwords is directly placed into a synchronized processing queue. The second approach is used in the client-server model discussed in subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can, in general, be more efficient than plain brute-forcing of passwords, which can in turn result in a faster password recovery.
 
 \section{Related Work}\label{related_work}
 
 \section{Testing and Results}
 
-The distributed password recovery framework was deployed in a virtualized enviroment. The enviroment was provided by the Centre for Research on Cryptography and Security (CRoCS). The setup consisted of 4 machines. One machine was used as the control server, the remaining three were clients. All were part of one local subnet. Every machine had 4 virtualized CPUs and 2 GB of RAM available. 
+The distributed password recovery framework was deployed in a virtualized environment. The environment was provided by the Centre for Research on Cryptography and Security (CRoCS). The setup consisted of 4 machines. One machine was used as the control server, the remaining three were clients. All were part of one local subnet. Every machine had 4 virtualized CPUs and 2 GB of RAM available. 
 
 The objective was to evaluate the capability of withstanding offline brute-force attacks. The following document types were tested:
 
@@ -705,12 +779,12 @@ The objective was to evaluate the capability of withstanding offline brute-force
 	\item{PDF 1.7 with a standard security handler of version 4 revision 6.}	
 \end{itemize}
 
-Note that the PDF variants were choosen to highlight differences between multiple protection mechanism. These algorithms changed frequently in obscure ways, as discussed in section \ref{pdf_summ}.
+Note that the PDF variants were chosen to highlight differences between multiple protection mechanism. These algorithms changed frequently in obscure ways, as discussed in section \ref{pdf_summ}.
 
-Every test had a duration of six hours. The password chunk size was set to 50,000, e.g. every client received a list of 50,000 unique passwords after connecting to the server. 
+Every test lasted six hours. The password chunk size was set to 50,000, e.g. every client received a list of 50,000 unique passwords after connecting to the server. 
 
 Figure \ref{average_speed} shows how much passwords were checked within 1 second. A lower speed means that the protection mechanism used by the document is more prone to offline brute-force attacks. Clearly, the best protection is standard encryption used by documents created in Microsoft Word 2007. Note that newer versions of Microsoft Word use by default an even more secure approach (agile encryption with a default password spin count of 100,000).
-Not so suprisingly, see section \ref{pdf_summ}, the highest password throughput was achieved when testing a PDF document using a security handler of version 4 revision 5. Adobe's obscure algorithm used in handlers of revision 6 is better. However, basically it is just as effective as 1024 iterations of PBKDF2 (used by LibreOffice Writer 5.2.2).  Worth mentioning is also the negligible difference between PDF's security handler revision 2 and 4. Adding tens of iterations of RC4 encryption has as good as no security benefits. 
+Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput was achieved when testing a PDF document using a security handler of version 4 revision 5. Adobe's obscure algorithm used in handlers of revision 6 is better. However, basically it is just as effective as 1024 iterations of PBKDF2 (used by LibreOffice Writer 5.2.2).  Worth mentioning is also the negligible difference between PDF's security handler revision 2 and 4. Adding tens of iterations of RC4 encryption has as good as no security benefits. 
 
 \begin{figure}[ht]
 	\centering
