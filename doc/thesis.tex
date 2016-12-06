@@ -71,6 +71,14 @@ keyword1, keyword2, ...
 \tableofcontents 
 \chapter{Introduction}
 
+Security is currently a hugely discussed topic among all segments of information technology. Protecting integrity, confidentiality and ensuring authenticity are needed in scenarios when data is handled between various parties. Most electronic document formats implement various mechanism to ensure these properties. Effectiveness of these mechanism is of particular importance as they become useless, once bypassed. This can happen when they are poorly implemented or, even worse, when designed by obscurity.
+
+The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used formats -- Microsoft Office documents, Portable Document Format (PDF) documents and Open Document Format (ODF) files. To achieve this goal an rather in depth knowledge of this document formats is needed. Fortunately, all mentioned format provide publicly available documentation. Therefore, in the beginning a research covering all formats was done. 
+
+After a necessary short introduction to properties electronic document protection mechanism should offer -- confidentiality, integrity and authentication, these mechanisms are covered in more depth. The focus is on providing confidentiality, which is commonly ensured using document encryption. Low level encryption algorithms and detailed description how encryption is implemented in the discussed formats are covered by chapters 3, 4 and 5, respectively. Protections mechanism ensuring authenticity, mostly digital signatures, are introduced and briefly discussed highlighting interesting facts and possible pitfalls. The main goal is to provide a necessary simple overview of all available mechanism in one place. The reader is able to find key points without an extensive dive into very comprehensive official documentation. 
+
+A distributed password recovery system was created as the implementation part of this thesis. In the current state it supports password recovery for Microsoft Word 2007 documents, documents in the latest Open Document Format -- 1.2, and PDF files using all publicly document encryption mechanism used through PDF versions 1.3 to 1.7. The system aims to be easily extensible and uses multiple levels of  parallelism as is covered in detail in chapter 6. The created system was used to evaluate and compare the level of protection provided by the aforementioned formats. Currently available solutions offering similar functionality are briefly covered and differences to our distributed solution are further discussed.
+ 
 \chapter{Document Protections}
 
 \section{Confidentiality}
@@ -301,7 +309,7 @@ Both are applicable for binary documents. ECMA-376 documents use the Xmldsig Dig
 
 \subsection{CryptoAPI Digital Signature} 
 
-A digitally signed binary document must contain a stream named \textit{\_signatures} . This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. 
+A digitally signed binary document must contain a stream named \textit{\_signatures}. This stream contains at least one signature and the corresponding certificate. Only X.509 certificates using RSA as the signing algorithm are allowed. They need to be stored in ASN.1 DER encoding. It also contains a timestamp which specifies when the signature was created. The document parts which shall be signed must be hashed using the MD5 function. Using the MD5 hash function introduces possibilities for collision attacks and practical attacks may be realistic, similarly to attacks demonstrated on PKI \cite{md5_vulnerable}. 
 
 
 \subsection{Xmldsig Digital Signature}
@@ -312,7 +320,7 @@ Xmldsig digital signatures are used in Office 2007 and above by default. This is
 
 \section{Summary}
 
-The structure of MS Office documents is very complex and changed heavily over time. Major differences can be seen between documents represented as specified by ECMA-376 and binary representation. ECMA-376 encryption methods are evolving over time, to reflect current trends and provide protection from modern threads. For example the default encryption mode changed from ECB to CBC and a whole new element providing data integrity was introduced. Binary protection methods, such as XOR obfuscation or 40-bit RC4 encryption, are out dated and do not provide sufficient level of security. However, this is clearly stated directly by the specification \cite[p. 93]{msoffcrypto}. Similarly, when using agile encryption or extensible encryption, use of modern hashing and encryption algorithms is explicitly recommended.
+The structure of MS Office documents is very complex and changed heavily over time. Major differences can be seen between documents represented as specified by ECMA-376 and binary representation. ECMA-376 encryption methods are evolving over time, to reflect current trends and provide protection from modern threats. For example the default encryption mode changed from ECB to CBC and a whole new element providing data integrity was introduced. Binary protection methods, such as XOR obfuscation or 40-bit RC4 encryption, are out dated and do not provide sufficient level of security. However, this is clearly stated directly by the specification \cite[p. 93]{msoffcrypto}. Similarly, when using agile encryption or extensible encryption, use of modern hashing and encryption algorithms is explicitly recommended.
 
 Passwords used for write protection are strongly protected. This is very important as people are used to reuse passwords commonly. Storing any kind of user-defined passwords inside the document structure in hashed form is definitely reasonable and correct. Of course, the hashing process should be intentionally slow to stop determined attackers. Write protection itself is not considered to be a security mechanism. It can be always bypassed. 
 
@@ -465,7 +473,7 @@ The process of password verification is straightforward:
 
 An interesting observation can be seen after describing the way of verifying a password provided by the user. The only computation that has to be done to verify a given password is calculating one SHA-256 hash value. This approach actually weakens the strength of the document protection as discussed in more detail in section \ref{pdf_summ}.
 
-Algorithms mentioned up to this point, are all publicly available and documented directly by Adobe. However, PDF files using a standard security handler of revision 6 are generated when using Adobe Acrobat Pro X or higher. A quick look at the preview of \textit{ISO/DIS 32000-2.4 Document management -- Portable document format -- Part 2: PDF 2.0} reveals that indeed standard security handlers of revision 6 and higher are mentioned. However, it is possible to find the actual key verification algorithm publicly on the Internet \cite{esec-lab}. The algorithm is similar to the algorithm used by security handlers of revision 5. It adds a minimum of 32 rounds of obscure AES-128 encryption followed by SHA-2 hashing.
+Algorithms mentioned up to this point, are all publicly available and documented directly by Adobe. However, PDF files using a standard security handler of revision 6 are generated when using Adobe Acrobat Pro X or higher. A quick look at the preview of \textit{ISO/DIS 32000-2.4 Document management -- Portable document format -- Part 2: PDF 2.0} reveals that indeed standard security handlers of revision 6 and higher are mentioned. However, it is possible to find the actual key verification algorithm publicly on the Internet \cite{esec_lab}. The algorithm is similar to the algorithm used by security handlers of revision 5. It adds a minimum of 32 rounds of obscure AES-128 encryption followed by SHA-2 hashing.
 
 \subsection{Public-Key Security Handlers}
 
@@ -541,7 +549,7 @@ Note that the specification covers the features of each type in very detail. It 
 
 \section{Summary}\label{pdf_summ}
 
-Password-based encryption done by standard security handlers is rather questionable. A shift from older insecure encryption algorithms, like RC4 and MD5, is a step in the right direction. However, the replacement introduced in security handlers of version 4 revision 5 rendered the protection level less secure, in terms of offline brute-force capabilities. As one iteration of SHA-256 hashing reveals the correctness of a given password, it is extremely easy to lunch effective offline attacks. Latest security handlers introduced a more sophisticated way of password derivation leveraging AES encryption. There seems to be no obvious reason not to use common password derivation functions like PBKDF2, which provide comparable benefits even with a low iteration count (see figure \ref{average_speed}). 
+Password-based encryption done by standard security handlers is rather questionable. A shift from older insecure cryptographic algorithms, like RC4 and MD5, is a step in the right direction. However, the replacement introduced in security handlers of version 4 revision 5 rendered the protection level less secure, in terms of offline brute-force capabilities. As one iteration of SHA-256 hashing reveals the correctness of a given password, it is extremely easy to lunch effective offline attacks. Latest security handlers introduced a more sophisticated way of password derivation leveraging AES encryption. There seems to be no obvious reason not to use common password derivation functions like PBKDF2, which provide comparable benefits even with a low iteration count (see figure \ref{average_speed}). 
 
 A better solution is to use public-key security handlers if offline brute-force attacks are considered a threat. However, this means that the document will be encrypted using RC4, which may lead to attacks leveraging known vulnerabilities in RC4. 
 
@@ -601,7 +609,7 @@ However, popular implementations seem to only support the first-mentioned approa
 
 Protections described in the Open Document Format are rather simple and clearly described. Focus on security can be seen when looking at differences of various versions. Version 1.2 introduced a mechanism for digital signatures as well as support for modern cryptographic functions. The use of PBKDF2 with configurable iteration count allows for the mitigation of simple offline brute-force attacks. However, GPU powered attacks may become extremely successful as PBKDF2 is not designed to be memory-hard \cite{PBKDF2_attack}.
 
-Two popular implementations have been tested: LibreOffice \cite{libreoffice} and Apache OpenOffice \cite{openoffice}. Both applications were used in the latest stable version released at the time - for LibreOffice this was version 5.2.2 and for OpenOffice version 4.1.3. An overview of the results is shown in table \ref{odt_impl_results}.
+Two popular implementations have been tested: LibreOffice and Apache OpenOffice. Both applications were used in the latest stable version released at the time - for LibreOffice this was version 5.2.2 and for OpenOffice version 4.1.3. An overview of the results is shown in table \ref{odt_impl_results}.
 
 \begin{table}[h]
 	\centering
@@ -779,9 +787,9 @@ The objective was to evaluate the capability of withstanding offline brute-force
 	\item{PDF 1.7 with a standard security handler of version 4 revision 6.}	
 \end{itemize}
 
-Note that the PDF variants were chosen to highlight differences between multiple protection mechanism. These algorithms changed frequently in obscure ways, as discussed in section \ref{pdf_summ}.
+Note that the PDF variants were chosen to highlight differences between various protection mechanism. These algorithms changed frequently in obscure ways, as discussed in section \ref{pdf_summ}.
 
-Every test lasted six hours. The password chunk size was set to 50,000, e.g. every client received a list of 50,000 unique passwords after connecting to the server. 
+Every test lasted six hours. The password chunk size was set to 50,000, i.e. every client received a list of 50,000 unique passwords after connecting to the server. 
 
 Figure \ref{average_speed} shows how much passwords were checked within 1 second. A lower speed means that the protection mechanism used by the document is more prone to offline brute-force attacks. Clearly, the best protection is standard encryption used by documents created in Microsoft Word 2007. Note that newer versions of Microsoft Word use by default an even more secure approach (agile encryption with a default password spin count of 100,000).
 Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput was achieved when testing a PDF document using a security handler of version 4 revision 5. Adobe's obscure algorithm used in handlers of revision 6 is better. However, basically it is just as effective as 1024 iterations of PBKDF2 (used by LibreOffice Writer 5.2.2).  Worth mentioning is also the negligible difference between PDF's security handler revision 2 and 4. Adding tens of iterations of RC4 encryption has as good as no security benefits. 
@@ -793,11 +801,12 @@ Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput
 	\label{average_speed}
 \end{figure}
 
-It should be mentioned that these results do no represent the brute-force capabilities of modern technology. Any decent tool leveraging parallelism provided by high-end GPUs will most probably achieve better results in terms of performance. Further work may include implementing such tools as clients for the distributed password recovery system. 
+It should be mentioned that these results do no represent the brute-force capabilities of modern technology. Any decent tool leveraging parallelism provided by high-end GPUs will most probably achieve better results in terms of performance. Further work may include implementing such tools as clients for our distributed password recovery system. 
 
 \chapter{Conclusion}
 
 \bibliography{thesis} 
+\inputencoding{utf8}
 \bibliographystyle{ieeetr}
 
 \begin{appendix}
