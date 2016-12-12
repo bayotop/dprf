@@ -805,6 +805,12 @@ It should be mentioned that these results do no represent the brute-force capabi
 
 \chapter{Conclusion}
 
+The aim of this thesis was to discuss and evaluate protection mechanisms offered by widely used electronic document formats. The evaluated formats are Microsoft Office documents, Portable Document Format (PDF) and Open Document Format.  The main focus was on mechanisms providing confidentiality, commonly ensured by document encryption. 
+
+The first part provides a necessary insight into the relevant parts of the document format specifications. Furthermore, design decisions and their implications are discussed. The level of detail is chosen, to provide relevant knowledge to the reader without the need to study the corresponding specifications in depth.
+
+The main benefit is the created distributed password recovery system. The system in its current state was used to evaluate the effectiveness of today protection mechanism used by the discussed document formats. Focus on modularity and extensibility ensure that further modifications to the system, may greatly improve the system's capabilities and usability. As an example, two proposed improvements are implementing dictionary based password guessing and support for fast and openly available brute-force tools, such as hashcat or John The Ripper.
+
 \bibliography{thesis} 
 \inputencoding{utf8}
 \bibliographystyle{ieeetr}
