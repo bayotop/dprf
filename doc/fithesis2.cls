@@ -102,8 +102,8 @@
 % faculty and thesis title on the title page
 \font\filogo fi-logo at 40mm % as logo of FI, METAFONT logo will be used
 \def\facultylogo{\@thesisfaculty-logo} % log format
-\def\universityname{Masarykova univerzita} % default university name
-\def\facultyname{Fakulta informatiky} % default faculty name
+\def\universityname{Masaryk University} % default university name
+\def\facultyname{Faculty of Informatics} % default faculty name
 \def\@thesissubtitle{Diplomov\'{a} pr\'{a}ce} % default thesis title
 \def\lowecasewrapper#1{\lowercase{#1}}
 

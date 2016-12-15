@@ -36,14 +36,15 @@
             citecolor=black,
             ]{hyperref}
 
-\thesistitle{Security analysis of document protections} % enter thesis title
-\thesissubtitle{Master's thesis}
+\thesislang{en}
+\thesistitle{Electronic document protection} % enter thesis title
+\thesissubtitle{Diploma thesis}
 \thesisstudent{Bc. Martin Bajaník} % name of the author
 \thesiswoman{false} % defines author's gender
 \thesisfaculty{fi}
-\thesisyear{autumn 2014}
+\thesisyear{autumn 2016}
 \thesisadvisor{RNDr. Jiří Kůr, Ph.D.} % fill in advisor's name
-\thesislang{en}
+
 
 \begin{document}
 \FrontMatter
@@ -55,15 +56,19 @@
 \end{ThesisDeclaration}
 
 \begin{ThesisThanks}
-Thanks ...
+Firstly, I would like to thank my advisor RNDr. Jiří Kůr, Ph.D. for the continuous support, for his patience, and insightful advice. His guidance helped me in all the time of research and writing of this thesis. 
+
+Besides my advisor, I would like to thank Bc. Martin Čuchran and  RNDr. Petr Švenda, Ph.D., who provided me access to a virtualized testing environment. 
+
+Last but not the least, I thank my friends and family for supporting me throughout my studies, for their constructive feedback, and valuable advice. 
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
-This thesis ...  
+The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used document formats -- Microsoft Office documents, Portable Document Format (PDF) files, and Open Document Format (ODF) documents. The focus is on mechanisms ensuring document confidentiality by using various encryption methods. Mechanisms providing document integrity and authenticity, like digital signatures and write protection, are also discussed. As part of the thesis a distributed password recovery system was designed and implemented. The system was used to evaluate password brute-force resilience of aforementioned document formats.  
 \end{ThesisAbstract}
 
 \begin{ThesisKeyWords}
-keyword1, keyword2, ...
+electronic document, Microsoft Office, ODF, PDF, encryption, password recovery
 \end{ThesisKeyWords}
 
 \MainMatter
@@ -73,7 +78,7 @@ keyword1, keyword2, ...
 
 Security is currently a hugely discussed topic among all segments of information technology. Protecting integrity, confidentiality and ensuring authenticity are needed in scenarios when data is handled between various parties. Most electronic document formats implement various mechanism to ensure these properties. Effectiveness of these mechanism is of particular importance as they become useless, once bypassed. This can happen when they are poorly implemented or, even worse, when designed by obscurity.
 
-The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used formats -- Microsoft Office documents, Portable Document Format (PDF) documents and Open Document Format (ODF) files. To achieve this goal an rather in depth knowledge of this document formats is needed. Fortunately, all mentioned format provide publicly available documentation. Therefore, in the beginning a research covering all formats was done. 
+The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used formats -- Microsoft Office documents, Portable Document Format (PDF) files, and Open Document Format (ODF) documents. To achieve this goal an rather in depth knowledge of this document formats is needed. Fortunately, all mentioned format provide publicly available documentation. Therefore, in the beginning a research covering all formats was done. 
 
 After a necessary short introduction to properties electronic document protection mechanism should offer -- confidentiality, integrity and authentication, these mechanisms are covered in more depth. The focus is on providing confidentiality, which is commonly ensured using document encryption. Low level encryption algorithms and detailed description how encryption is implemented in the discussed formats are covered by chapters 3, 4 and 5, respectively. Protections mechanism ensuring authenticity, mostly digital signatures, are introduced and briefly discussed highlighting interesting facts and possible pitfalls. The main goal is to provide a necessary simple overview of all available mechanism in one place. The reader is able to find key points without an extensive dive into very comprehensive official documentation. 
 
@@ -240,7 +245,7 @@ To understand how the password key encryptor is generated, it is necessary to de
 
 Note that the intermediate key, used to encrypt the plain-text content of the documents, is randomly generated. Unlike in standard encryption, where the final encryption key was directly derived from the user-supplied password. The specification does not mention anything about how this intermediate key should be generated. In case the key is not generated using a cryptographically secure pseudo-random number generator (CSPRNG), then an implementation specific weakness is introduced and presents a serious flaw in the encryption process. 
 
-In addition to confidentiality, agile encryption also provides a way to verify integrity of encrypted files. Verification is done using the \textit{encryptedHmacKey} and \textit{encryptedHmacValue} attributes of the \textit{EncryptionInfo's DataIntegrity} element. The process of generating this attributes is as follows:
+In addition to confidentiality, agile encryption also provides a way to verify integrity of encrypted files. Verification is done using the \textit{encryptedHmacKey} and \textit{encryptedHmacValue} attributes of the \textit{DataIntegrity} element. The process of generating this attributes is as follows:
 
 \begin{enumerate}
 \setlength\itemsep{0.1em}
@@ -571,7 +576,7 @@ Particularly important in the context of this paper is the second method. All pr
 
 The encryption process as specified in Open Document Format for Office Applications (\textit{OpenDocument}) \cite{odt_spec} has 3 stages:
 
-\begin{enumerate}
+\begin{enumerate}\label{encrypt_process_odt}
 \setlength\itemsep{0.1em}
 	\item{The user-supplied password is hashed.}
 	\item{For each file to be encrypted, a separate key is generated using the hashed password and the PBKDF2 algorithm \cite{rfc2898}.}
@@ -597,6 +602,18 @@ All algorithms that can be used for the purposes discussed in this section, and 
 
 Versions 1.0 and 1.1 specified SHA-1 as the only hash function for the \texttt{manifest:checksum-type} and \texttt{manifest:start-key-generation-name} attributes. The only available \texttt{manifest:algorithm-name} was Blowfish in CFB mode. Version 1.2 introduced support for additional hash functions and algorithms: SHA-256, SHA-512, RIPEMD-160, 3DES, AES-128, AES-256, and AES-192. The only available key generation algorithm in all three versions is PBKDF2.
 
+\subsection{Password verification process}
+
+The following steps are needed to verify if a user-entered password is correct:
+
+\begin{enumerate}
+\setlength\itemsep{0.1em}
+	\item{Generate an encryption key as described in algorithm \ref{encrypt_process_odt}.}
+	\item{Use the key generated in step 1 to decrypt any file from the ODT package.}
+	\item{Calculate a hash of the decrypted file using the hash algorithm defined in the corresponding \texttt{manifest:checksum-type} attribute.}
+	\item{If the result of step 3 matches the BASE64 decoded value of the corresponding \texttt{manifest:checksum} attribute, the password is correct.}
+\end{enumerate}
+
 \section{Digital Signatures}
 
 Digital signatures have been defined ever since version 1.2. One package may contain multiple signatures. All signatures are located within the \texttt{META-INF/} folder and should contain the term \textit{signature} in their name. Every signature has to explicitly list all files that are being validated. In particular, all files should be referenced by some signature to ensure the integrity of the entire document.
@@ -608,8 +625,6 @@ However, popular implementations seem to only support the first-mentioned approa
 \section{Summary}
 
 Protections described in the Open Document Format are rather simple and clearly described. Focus on security can be seen when looking at differences of various versions. Version 1.2 introduced a mechanism for digital signatures as well as support for modern cryptographic functions. The use of PBKDF2 with configurable iteration count allows for the mitigation of simple offline brute-force attacks. However, GPU powered attacks may become extremely successful as PBKDF2 is not designed to be memory-hard \cite{PBKDF2_attack}.
-
-Two popular implementations have been tested: LibreOffice and Apache OpenOffice. Both applications were used in the latest stable version released at the time - for LibreOffice this was version 5.2.2 and for OpenOffice version 4.1.3. An overview of the results is shown in table \ref{odt_impl_results}.
 
 \begin{table}[h]
 	\centering
@@ -631,6 +646,8 @@ Two popular implementations have been tested: LibreOffice and Apache OpenOffice.
 	\label{odt_impl_results}
 \end{table}
 
+Two popular implementations have been tested: LibreOffice and Apache OpenOffice. Both applications were used in the latest stable version released at the time - for LibreOffice this was version 5.2.2 and for OpenOffice version 4.1.3. An overview of the results is shown in table \ref{odt_impl_results}.
+
 Both applications encrypt all files in the package. Similarly, both applications include all files when applying a digital signature to the document. A particularly interesting finding is that Open Office prefers the Blowfish algorithm for encrypting documents.
 
 \chapter{Distributed Password Recovery}
@@ -650,7 +667,7 @@ The whole system consists of 3 logically separated parts depicted in figure \ref
 	\label{ddpbf_design}
 \end{figure}
 
-The input for the system is a password protected Office, PDF or ODT document. As the password verification process can be very different among these formats, a detailed list of currently supported algorithms follows:
+The input for the system is a password protected Office, PDF or ODF document. As the password verification process can be very different among these formats, a detailed list of currently supported algorithms follows:
 
 \begin{itemize}
 \setlength\itemsep{0.1em}
@@ -714,7 +731,7 @@ Once run, the client generates a UUID and immediately sends a message to the ser
 
 \subsection{Document parsers} \label{doc_parsers}
 
-The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODT files was implemented as part of this thesis. The parser accepts as valid input, ODT files conforming to the latest specifications (version 1.2).
+The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but rather taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODF files was implemented as part of this thesis. The parser accepts as valid input, ODF files conforming to the latest specifications (version 1.2).
 
 \subsection{Brute-force engine}\label{brute_force_engine}
 
@@ -771,6 +788,55 @@ Additionally, the script provides a public \textit{init()} method that, requires
 
 \section{Related Work}\label{related_work}
 
+This section surveys related work in password recovery. It introduces two popular, actively developed, open-source tools specialized in brute-force-based password recovery -- hashcat\footnote{Available at: https://github.com/hashcat/hashcat} and John The Ripper\footnote{Available at: https://github.com/magnumripper/JohnTheRipper}.
+
+\subsection{Hashcat}
+
+Hashcat is a powerful password recovery command line utility. The source code is publicly available and there exists a huge community contributing to the project. It leverages the enormous power of modern GPUs. Supported are AMD, NVidia and Intel GPUs on all major operating systems -- Windows, Linux and OSX.
+
+Hashcat supports a broad range of hashing algorithms. The relevant ones in context of this thesis are hashing algorithms implemented by the following document formats: 
+
+\begin{itemize}
+\setlength\itemsep{0.1em}
+	\item{Microsoft Office 2003, 2007, 2010, 2013.}
+	\item{PDF 1.1-1.7 (standard security handlers that are implemented by Adobe Acrobat 2-11).}	
+\end{itemize}
+
+Note that documents  in the Open Document Format (ODF) are not directly listed as supported. The reason for this is most probably the fact that password verification in ODF is not done using any kind of password verifiers. As described in section \ref{odt_enc}, the password verification process includes actually decrypting at least one file from the document package. Hashcat does not offer this functionality. Moreover, hashcat is not designed to work directly with any kind of documents. The input hashcat expects is a file containing some kind of hashes (the type depends on the hash algorithm used). For protected MS Office documents this hashes are the password verifiers that can be found in the document file. Extracting the correct hashes from the protected document has to be done before the actual recovery process can be done using hashcat.
+
+The following command can be used to start the recovery process of the password for a MS Office 2007 protected document:
+
+\begin{lstlisting}
+$ hashcat64.exe -a 3 -m 9400 hash.txt
+\end{lstlisting}
+
+The \texttt{-a} option sets the attack mode. Various attack modes are supported, e.g. using plain brute-force, wordlists and hybrid modes using password masks. The value 3 indicates that plain brute-force should be used. The \texttt{-m} options sets the hash algorithm that should be used. In this case the algorithm used by MS Office 2007. The \texttt{hash.txt} is the path to the input file containing the corresponding password verifiers. The correct formatting of the file is given by the hash algorithm specified by the \texttt{-m} option. In this particular example it looks like this:
+
+\begin{lstlisting}
+$office$*2007*20*128*16*c292393e377b00f97c3cf5e35245e785* \
+95d36a917993e0a70ffc9558d335b414* \
+a62e6c8f6a6dd4296ae7fd6cc7e66f36fde530a3
+\end{lstlisting}
+
+Note that all the values can be extracted from a protected document, as described in more detail in section \ref{ms_encryption}.
+
+Another set of features, especially relevant in context of our distributed password recovery system, is support for integration with distributed frameworks. The options \texttt{-s} for (s)kip and \texttt{-l} for (l)imit can be used to define an exact range of passwords from a given password space. The execution can then look as follows:
+
+\begin{lstlisting}
+Client 1: hashcat64.exe -s   0 -l 250 ... // computes   0 - 249
+Client 2: hashcat64.exe -s 250 -l 250 ... // computes 250 - 499
+Client 3: hashcat64.exe -s 500 -l 250 ... // computes 500 - 749
+Client 4: hashcat64.exe -s 750 -l 250 ... // computes 750 - 999
+\end{lstlisting}
+
+Note that a \texttt{----keyspace} option is available, which should be used to calculate the size of a dynamically created password space. 
+
+\subsection{John The Ripper}
+
+As JtR was not extensively used when working on this thesis it is mainly mentioned for the sake of completeness.
+
+John The Ripper (JtR), similarly to hashcat, is an open-source password recovery utility. It is supported on multiple operating system including many flavors of Unix, Windows, DOS, and OpenVMS. A paid version of JtR is also available. The official website states that this version is meant to be easier to install and use delivering optimal performance \cite{jtr}. Worth mentioning is also the community-enhanced version labeled \textit{jumbo}. It includes a lot of code, documentation, and data contributed by the user community around JtR.
+  
 \section{Testing and Results}
 
 The distributed password recovery framework was deployed in a virtualized environment. The environment was provided by the Centre for Research on Cryptography and Security (CRoCS). The setup consisted of 4 machines. One machine was used as the control server, the remaining three were clients. All were part of one local subnet. Every machine had 4 virtualized CPUs and 2 GB of RAM available. 
@@ -792,7 +858,7 @@ Note that the PDF variants were chosen to highlight differences between various 
 Every test lasted six hours. The password chunk size was set to 50,000, i.e. every client received a list of 50,000 unique passwords after connecting to the server. 
 
 Figure \ref{average_speed} shows how much passwords were checked within 1 second. A lower speed means that the protection mechanism used by the document is more prone to offline brute-force attacks. Clearly, the best protection is standard encryption used by documents created in Microsoft Word 2007. Note that newer versions of Microsoft Word use by default an even more secure approach (agile encryption with a default password spin count of 100,000).
-Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput was achieved when testing a PDF document using a security handler of version 4 revision 5. Adobe's obscure algorithm used in handlers of revision 6 is better. However, basically it is just as effective as 1024 iterations of PBKDF2 (used by LibreOffice Writer 5.2.2).  Worth mentioning is also the negligible difference between PDF's security handler revision 2 and 4. Adding tens of iterations of RC4 encryption has as good as no security benefits. 
+Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput was achieved when testing a PDF document using a security handler of version 4 revision 5. Adobe's obscure algorithm used in handlers of revision 6 is better. However, basically it is just as effective as 1024 iterations of PBKDF2 (used by LibreOffice Writer 5.2.2).  Worth mentioning is also the negligible difference between PDF's security handler revision 2 and 4. Adding tens of iterations of RC4 encryption has as good as no security benefits, in terms of password brute-force resilience. 
 
 \begin{figure}[ht]
 	\centering
@@ -800,6 +866,31 @@ Not so surprisingly, see section \ref{pdf_summ}, the highest password throughput
 	\caption{Average password attempts per second}
 	\label{average_speed}
 \end{figure}
+
+Table \ref{real_world_time} shows time necessary to recover passwords of specified length, considering passwords consisting solely of lower case letters of the Roman alphabet. Note that these numbers apply for the current setup using 3 clients. An increased number of clients will linearly decrease the time needed to recover the correct password. The numbers listed hold true for the worst-case scenario, i.e. the last guessed password is the correct one.
+
+ \begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+           \hline
+		&\textbf{MS Word 2007}&\textbf{LibreOffice Writer 5.2.2}&\textbf{PDF 1.7 V4 R5}\\
+	\hline
+		3&< 25 seconds&< 9 seconds&< 6 seconds\\
+	\hline
+		4&< 10 minutes&< 4 minutes&< 2.5 minutes\\
+	\hline
+		5&< 5 hours& < 2 hours&< 1.1 hours\\
+	\hline
+		6&< 5 days&< 2 days&< 1.2 days\\
+	\hline
+		7&< 17 weeks&< 7 weeks&< 4.2 weeks\\
+	\hline
+		8&< 9 years&< 3.5 years&< 2.1 years\\
+	\hline
+           \end{tabular}
+	\caption{Approximated time needed to recover passwords of specified length. Passwords consisting of Roman lower case letters only.}
+	\label{real_world_time}
+\end{table}
 
 It should be mentioned that these results do no represent the brute-force capabilities of modern technology. Any decent tool leveraging parallelism provided by high-end GPUs will most probably achieve better results in terms of performance. Further work may include implementing such tools as clients for our distributed password recovery system. 
 
