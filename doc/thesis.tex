@@ -835,7 +835,17 @@ Note that a \texttt{----keyspace} option is available, which should be used to c
 
 As JtR was not extensively used when working on this thesis it is mainly mentioned for the sake of completeness.
 
-John The Ripper (JtR), similarly to hashcat, is an open-source password recovery utility. It is supported on multiple operating system including many flavors of Unix, Windows, DOS, and OpenVMS. A paid version of JtR is also available. The official website states that this version is meant to be easier to install and use delivering optimal performance \cite{jtr}. Worth mentioning is also the community-enhanced version labeled \textit{jumbo}. It includes a lot of code, documentation, and data contributed by the user community around JtR.
+John The Ripper (JtR), similarly to hashcat, is an open-source password recovery utility. It is supported on multiple operating systems including many flavors of Unix, Windows, DOS, and OpenVMS. A paid version of JtR is also available. The official website states that this version is meant to be easier to install and use delivering optimal performance \cite{jtr}. Worth mentioning is also the community-enhanced version labeled \textit{jumbo}. It includes a lot of code, documentation, and data contributed by the user community around JtR. A good example of such data are parsers for MS Office and PDF documents, as mentioned in subsection \ref{doc_parsers} -- pdf2john.py and  office2john.py.
+
+Running JtR is pretty straightforward:
+
+\begin{lstlisting}
+john.exe password.hash
+\end{lstlisting}
+
+The one required argument is a file containing all information about the password hashes used to recovery the original passwords. In most cases this file can be created using any parser that can be found in JtR's \texttt{/run/} directory\footnote{https://github.com/magnumripper/JohnTheRipper/tree/bleeding-jumbo/run}. By default JtR will run in \textit{single crack mode}. This mode is especially powerful when considering the primary purpose of JtR -- detecting weak Unix passwords. Unlike plain brute-force this mode will start guessing passwords based on the user's home directory, full name or \textit{gecos} fields, and login names. A very interesting feature of this mode is that any successfully recovered password will be used as a guess for all other hashes. This technique can be very efficient, given the well known fact of  people tending to choose similar passwords.
+
+Other modes can be used, e.g. using a wordlist, password rules or plain incremental brute-force. 
   
 \section{Testing and Results}
 
