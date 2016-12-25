@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """ Distributed Document Password Brute-Force Framework Server
-    Version 0.0.1 (alfa)
+    Version 0.0.1
 
     Document types:
         1: Microsoft Office
@@ -13,8 +13,8 @@
         OpenDocument - v1.2 with AES-256 in CBC mode
         Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
-    More to implement:
-        - Implement a logger, get rid of prints.
+    Further work:
+        - Implement a logger.
         - Curses UI.
 """
 
@@ -37,6 +37,7 @@ __date__   = "21.10.2016"
 __email__  = "396204@mail.muni.cz"
 __status__ = "Development"
 
+# Represents a brute-force client connected to the server
 class Client:
     def __init__(self, id, last_activity):
         self.id = id
@@ -141,7 +142,7 @@ def handle_connection(client, address, message):
             client.close()
             return False, counter
 
-    # We increase the count of processed pasword, as a client is contacting us repeatedly,
+    # We increase the count of processed passwords, as a client is contacting us repeatedly,
     # which means he already processed the previous chunk
     else:
         counter += payload_size
@@ -242,7 +243,7 @@ def remove_inactive_clients(q):
         for c in inactive_clients:
             print "Client ", c.id, " is inactive."           
             clients.remove(c)
-            # Add all password to processing queue as they have to be resend to another client eventually
+            # Add all passwords to processing queue as they have to be resend to another client eventually
             for password in processed_passwords[c.id]:
             	q.put(password)
             del processed_passwords[c.id]
@@ -292,7 +293,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""\
             Distributed Document Password Brute-Force Framework Server
-            Version 0.0.1 (alfa)
+            Version 0.0.1
 
             Document types:
                 1: Microsoft Office

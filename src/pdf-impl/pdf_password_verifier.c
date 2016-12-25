@@ -17,7 +17,7 @@
 / Author: Martin Bajanik 
 / Date: 14.10.2016
 /
-/ TO DO: Implement owner password verification. 
+/ Further work: Implement owner password verification. 
 */
 
 static int verbose = 0;

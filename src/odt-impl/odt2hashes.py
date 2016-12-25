@@ -8,7 +8,7 @@ import base64
 import os
 import xml.etree.ElementTree as et
 
-# TODO:
+# Further work:
 #       Namespace handling when parsing XML needs refactoring, i.e:
 #           urn:oasis:names:tc:opendocument:xmlns:manifest:1.0
 #           urn:oasis:names:tc:opendocument:xmlns:digitalsignature:1.0

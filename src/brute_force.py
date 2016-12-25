@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """ Document Password Brute-Forcer
-    Version 0.0.1 (alfa)
+    Version 0.0.1
 
     Document types:
         1: Microsoft Office
@@ -13,7 +13,7 @@
         OpenDocument - v1.2 with AES-256 in CBC mode
         Portable Document Format - PDF 1.3 - 1.7 (Standard Security Handlers v1-5 r2-6)
 
-    More to implement:
+    Further work:
         - Support for more formats (Office 2015, older ODT versions, ...)
         - Implement owner password support for PDF
 """
@@ -61,7 +61,7 @@ def init_rangebased_brute_force(input_data, password_range):
     q = JoinableQueue()
     counter = Value('i', 0)
     found = Value('b', False)
-    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution
+    password = Array(c_char, "default_password_allocation") # TO DO: Password can't not be longer then this. Think about a better solution.
 
     t = Process(target=_generate, name="Password Generator", args=(q, password_range, found))
     t.daemon = True
@@ -83,7 +83,7 @@ def init_listbased_brute_force(input_data, passwords):
     q = JoinableQueue()
     counter = Value('i', 0)
     found = Value('b', False)
-    password = Array(c_char, "default_password_allocation") # TO DO: Password should not be longer then this. Need a better solution
+    password = Array(c_char, "default_password_allocation") # TO DO: Password can't not be longer then this. Think about a better solution.
 
     # Fill the passwords into a joinable queue
     for i in passwords:
@@ -143,7 +143,6 @@ def _brute_force(q, counter, found, input_data, password):
                     password.value = pwd
                     print("Correct password is '" + pwd + "'")
                 # Force q.join() to be triggered
-                # TO DO: Find a nicer way
                 _force_queue_join(q)
                 return
 
@@ -207,7 +206,6 @@ def _generate(q, password_range, found):
             # Make sure we can easily force q.join when password is found
             while (q.qsize() > 5000):
                 time.sleep(2)
-            # TO DO: Find a better way to cancel generating after password is found
             if (found.value):
                 _force_queue_join(q)
                 return
@@ -234,7 +232,6 @@ def _force_queue_join(q):
 def get_verification_data(doc_type, filename):
     print "Parsing " + filename + "..."
  
-    # TO DO: Refactor this to properly include this python scripts instead of using check_output
     if (doc_type == '1'):
         return check_output(["python", "ms-offcrypto-impl/office2john.py", filename]).strip()
 
@@ -272,7 +269,7 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         description=textwrap.dedent("""\
             Document Password Brute-Forcer
-            Version 0.0.1 (alfa)
+            Version 0.0.1
 
             Document types:
                 1: Microsoft Office

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 """ Distributed Document Password Brute-Force Framework Client
-    Version 0.0.1 (alfa)
+    Version 0.0.1
 
     Document types:
         1: Microsoft Office
