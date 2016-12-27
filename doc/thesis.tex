@@ -60,7 +60,7 @@ Firstly, I would like to thank my advisor RNDr. Jiří Kůr, Ph.D. for the conti
 
 Besides my advisor, I would like to thank Bc. Martin Čuchran and  RNDr. Petr Švenda, Ph.D., who provided me access to a virtualized testing environment. 
 
-Last but not the least, I thank my friends and family for supporting me throughout my studies, for their constructive feedback and valuable advice. 
+Last but not the least, I thank my friends and family for supporting me throughout my studies, for their constructive feedback, and valuable advice. 
 \end{ThesisThanks}
 
 \begin{ThesisAbstract}
@@ -76,13 +76,13 @@ electronic document, Microsoft Office, ODF, PDF, encryption, password recovery
 \tableofcontents 
 \chapter{Introduction}
 
-Security is currently a hugely discussed topic among all segments of information technology. Protecting integrity, confidentiality, and ensuring authenticity are needed in scenarios when data is handled between various parties. Most electronic document formats implement various mechanism to ensure these properties. Effectiveness of these mechanism is of particular importance as they become useless, once bypassed. This can happen when they are poorly implemented or, even worse, when relying on the secrecy of the design as the main method of providing security.
+Security is currently a hugely discussed topic among all segments of information technology. Protecting integrity, confidentiality, and ensuring authenticity are needed in scenarios when data is handled by various parties. Most electronic document formats implement multiple mechanisms to ensure these properties. Effectiveness of these mechanisms is of particular importance as they become useless once bypassed. This can happen when they are poorly implemented or, even worse, when relying on the secrecy of the design as the main method of providing security.
 
-The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used formats -- Microsoft Office documents, Portable Document Format (PDF) files, and Open Document Format (ODF) documents. To achieve this goal a rather in depth knowledge of this document formats is needed. Fortunately, all mentioned formats provide publicly available documentation. Therefore, in the beginning a research covering all formats was done. 
+The aim of this thesis is to provide an overview of protection mechanisms implemented by three popular and widely used formats -- Portable Document Format (PDF), Open Document Format (ODF), and formats used in Microsoft Office documents. To achieve this goal a rather in depth knowledge of this document formats is needed. Fortunately, all mentioned formats provide publicly available documentation. Therefore, in the beginning a research covering all formats was done. 
 
-After a necessary short introduction to properties electronic document protection mechanism should offer -- confidentiality, integrity, and authentication, these mechanisms are covered in more depth. The focus is on providing confidentiality, which is commonly ensured using document encryption. Low level encryption algorithms and detailed description how encryption is implemented in the discussed formats are covered by Chapters 3, 4, and 5, respectively. Protections mechanism ensuring authenticity, mostly digital signatures, are introduced and briefly discussed highlighting interesting facts and possible pitfalls. The main goal is to provide a necessary overview of all available mechanism in one place. The reader is able to find key points without an extensive dive into very comprehensive official documentation. 
+The structure of the thesis is the following. The first chapter provides a necessary introduction to properties that electronic document protection mechanisms should offer -- confidentiality, integrity, and authentication. Mechanisms defined in the aforementioned formats are covered in the next three chapters. The focus is on providing confidentiality, which is commonly ensured using document encryption. Encryption algorithms are discussed in great detail. Protection mechanisms ensuring authenticity, mostly digital signatures, are introduced and briefly discussed highlighting interesting facts and possible pitfalls. The main goal is to provide a necessary overview of all available mechanisms in one place. The reader is able to find key points without an extensive dive into official, very comprehensive, documentation. Chapter \ref{ch_ms} covers formats used in Microsoft Office documents, with focus on the newest format -- Office Open XML (ECMA-376). Chapter \ref{ch_pdf} provides information about the Portable Document Format maintained by Adobe Systems. Chapter \ref{ch_odt} covers the Open Document Format as defined by OASIS.
 
-A distributed password recovery system was created as the implementation part of this thesis. In the current state it supports password recovery for Microsoft Word 2007 documents, documents in the latest Open Document Format -- 1.2, and PDF files using all publicly document encryption mechanism used through PDF versions 1.3 to 1.7. The system aims to be easily extensible and uses multiple levels of  parallelism as is covered in detail in Chapter 6. The created system was used to evaluate and compare the level of protection provided by the aforementioned formats. Currently available solutions offering similar functionality are briefly covered and differences to our distributed solution are further discussed.
+A distributed password recovery system was created as the implementation part of this thesis. In the current state it supports password recovery for Microsoft Word 2007 documents, documents in the latest Open Document Format -- 1.2, and PDF files using all publicly documented encryption mechanisms used through PDF versions 1.3 to 1.7. The system aims to be easily extensible and uses multiple levels of  parallelism as is covered in detail in Chapter \ref{ch_impl}. The created system was used to evaluate and compare the level of protection provided by the aforementioned formats. Currently available solutions offering similar functionality are briefly covered and differences to our distributed solution are further discussed.
  
 \chapter{Document Protections}
 
@@ -94,10 +94,12 @@ All modern electronic document formats specify security measures to protect one 
 \setlength\itemsep{0.1em}
 \item{\textbf{Confidentiality} -- ensures that unauthorized parties will not be able to read protected contents of a document. The common security measure achieving this property is encryption. Most document formats implement user-password based encryption. However, other types of encryption can be used, especially with PDF documents, as discussed in Subsection \ref{pdf_enc}.}
 \item{\textbf{Integrity} -- ensures that unauthorized parties are not able to modify protected contents of a document. All document formats provide a standard way to protect integrity using asymmetric cryptography. The general idea is that a hash of a given document is calculated and compared to a hash calculated by the document's author. This whole process needs to be done in a secure fashion.}
-\item{\textbf{Authentication} -- }
+\item{\textbf{Authenticity} -- means that it is possible to establish that a document originated from a trusted source. In most cases authenticity implies integrity. In case a document's content is changed any existing metadata proving authenticity should become invalid. Similarly to integrity, authenticity is commonly ensured using asymmetric cryptography, specifically digital signatures.}
 \end{itemize}
 
-\chapter{MS Office Document Cryptography Structure}
+It is important to mention that the above list of facets is by no means exhaustive. Other factors are also very important in certain scenarios, such as non-repudiation or availability. However, this thesis focuses on protection measures offered directly by a given document format. Protecting information stored in electronic documents is a complex task with many pitfalls. Legal and social processes should be implemented to add another layer of security, besides technical concepts leveraging cryptography.  
+
+\chapter{MS Office Document Cryptography Structure}\label{ch_ms}
 
 This chapter aims to provide insight into the structure of Microsoft Office document files with respect to ensuring confidentiality, integrity, and authenticity, to highlight differences between various Office versions, and discuss the security implications that result from the specified protection measures.
 
@@ -338,7 +340,7 @@ Digital signatures provide a confirmation that the document's content comes from
 
 Microsoft Office is implementing all mentioned protections using modern cryptographic algorithms with strong defaults. 
 
-\chapter{Portable Document Format}
+\chapter{Portable Document Format}\label{ch_pdf}
 
 Document protections of the Portable Document Format (PDF) files will be discussed in details necessary in context of this thesis. All information is based on two publicly available specifications:
 
@@ -565,7 +567,7 @@ A better solution is to use public-key security handlers if offline brute-force 
 
 Portable Document Format provides very advanced and extensible mechanism for digital signatures. Support for alternative signature methodologies, incremental updates and robust algorithm support, render it superior compared to other discussed document formats. Adobe also explicitly encourages third parties to register new signature handlers. A further detailed review on digital signatures in PDF and existing implementations of signature handlers may be very educative and useful.  
 
-\chapter{Open Document Format for Office Applications}
+\chapter{Open Document Format for Office Applications}\label{ch_odt}
 
 Documents in the Open Document Format can be represented in two ways \cite{odt_spec}:
 
@@ -660,15 +662,15 @@ Two popular implementations have been tested: LibreOffice and Apache OpenOffice.
 
 Both applications encrypt all files in the package. Similarly, both applications include all files when applying a digital signature to the document. A particularly interesting finding is that Open Office prefers the Blowfish algorithm for encrypting documents.
 
-\chapter{Distributed Password Recovery}
+\chapter{Distributed Password Recovery}\label{ch_impl}
 
 As people tend to forget passwords, it is likely that access to password-protected documents can be lost. A straightforward solution in this case is brute-force, as password verification is done offline. To show and further discuss the speed and efficiency of this process, a distributed password recovery system was created.
 
-The implementation and all the files mentioned in this chapter can be found on the attached CD or in the official thesis archive.\footnote{Available at \textit{https://is.muni.cz/th/396204/fi\_m/}}.
+The implementation and all the files mentioned in this chapter can be found on the attached CD or in the official thesis archive.\footnote{Available at \textit{https://is.muni.cz/th/396204/fi\_m/}}
 
 \section{System Overview}
 
-The whole system consists of 3 logically separated parts depicted in figure \ref{ddpbf_design}. 
+The whole system consists of 3 logically separated parts depicted in figure \ref{ddpbf_design} -- client-server modules handling communication and synchronization, document parsers, and a brute-force engine for password recovery.
 
 \begin{figure}[ht]
 	\centering
@@ -676,6 +678,8 @@ The whole system consists of 3 logically separated parts depicted in figure \ref
 	\caption{Distributed password recovery design}
 	\label{ddpbf_design}
 \end{figure}
+
+The basic idea is that the server part acts as the main entry point for the user and handles all additional work. It utilizes a document parser to gather information necessary for password verification and distributes work among all active clients. A more detailed description of every part follows later in this chapter. 
 
 The input for the system is a password protected Office, PDF or ODF document. As the password verification process can be very different among these formats, a detailed list of currently supported algorithms follows:
 
@@ -686,9 +690,23 @@ The input for the system is a password protected Office, PDF or ODF document. As
 	\item{Open Document Format – version 1.2 using AES-256 (as described in Subsection \ref{odt_enc}).}
 \end{itemize}
 
-The basic idea is that the server part acts as the main entry point for the user and handles all additional work. It utilizes a document parser to gather information necessary for password verification and distributes work among all active clients. A more detailed description of every part follows. 
+\subsection{Document parsers} \label{doc_parsers}
 
-\subsection{Client-server model}\label{client-server}
+The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but were taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODF files was implemented as part of this thesis. The parser accepts as valid input ODF files conforming to the latest specifications (version 1.2). This is mainly to ensure that the optimal file, from the ODT package, is chosen for verification (as noted in Subsection \ref{odt_file_note}).
+
+\subsection{Server}\label{client-server}
+
+When run, the server extracts all information necessary to perform the password recovery process. This is accomplished by calling one of the document parsers described in Subsection \ref{doc_parsers}. Afterwards the server passively waits for clients to connect. Once connected, the server sends the verification data and a list of passwords to verify, in JSON \cite{rfc7159} format:
+
+\begin{lstlisting} 
+{"passwords":[<passwords>], "data":"<document_parser_output>"}
+\end{lstlisting}\label{server_message}
+
+Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption, the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
+
+A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value, the time interval between two messages exchanged between a client and the server might be very high (even days). This is because the client will ask for a new list of passwords after it successfully verifies all the passwords it has received. To recognize inactive clients (e.g., the client machine was terminated, etc.) a heart beat mechanism is implemented. Every 20 seconds, a small message (heart beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 seconds will be marked as inactive. In the event a client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically for an unlimited linear growth in performance. The server keeps track of what passwords were sent to what client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive, all passwords that were currently processed by it are eventually resent to another client. 
+
+On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is represented by the number of tried passwords per second. The speed is naïvely computed as the ratio of the elapsed time and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shut down when it receives the correct password from a client.
 
 The server provides a simple command line interface and can be started using the following command: 
 
@@ -702,10 +720,8 @@ Note that the current version must be run with Python 2.7 in order to function p
 \setlength\itemsep{0.1em}
 	\item{\textbf{-h} -- Shows a descriptive help message.}
 	\item{\textbf{-pr} -- Sets the password's maximum length (default: 8).}
-		\begin{itemize}
-		\setlength\itemsep{0.1em}
-			\item{All passwords up to the specified length will be checked.}
-		\end{itemize}
+
+	\textit{Note that all passwords up to the specified length will be checked.}
 	\item{\textbf{-ps} -- Number of passwords sent to each client on every connection (default: 20,000).}
 	\item{\textbf{document\_type} -- Number identifying the given document's type.}
 		\begin{itemize}
@@ -715,20 +731,13 @@ Note that the current version must be run with Python 2.7 in order to function p
 			\item{3 -- Portable Document Format}
 		\end{itemize}
 	\item{\textbf{filename} -- Path to the document file whose password should be recovered.}
-	\item{\textbf{tcp\_ip, tcp\_port} --  IP address and port number, to which clients should connect in order to communicate with the server.}
+	\item{\textbf{tcp\_ip} --  IP address.} 
+	\item{\textbf{tcp\_port} -- Port number.}
 \end{itemize}\label{server_params}
 
-When run, the server extracts all information necessary to perform the password recovery process. This is accomplished by calling one of the document parsers described in Subsection \ref{doc_parsers}. Afterwards the server passively waits for clients to connect. Once connected, the server sends the verification data and a list of passwords in JSON \cite{rfc7159} format:
+The IP address and port number are used to connect to the server part of the system.
 
-\begin{lstlisting} 
-{"passwords":[<passwords>], "data":"<document_parser_output>"}
-\end{lstlisting}\label{server_message}
-
-Passwords are generated in a separate sub-process and placed into a synchronized queue. To prevent massive memory consumption, the number of items in the queue must never exceed the limit of 2 times the password chunk size that is sent to clients (set by the \textit{–pr} argument).
-
-A list of active clients is maintained by the server. Every client is clearly identified by a universally unique identifier (UUID) \cite{rfc4122}. When setting the \textit{–pr} argument to a high value, the time interval between two messages exchanged between a client and the server might be very high (even days). This is because the client will ask for a new list of passwords after it successfully verifies all the passwords it has received. To recognize inactive clients (e.g., the client machine was terminated, etc.) a heart beat mechanism is implemented. Every 20 seconds, a small message (heart beat) is sent to the server. As a result, any client not connecting to the server for longer than 120 seconds will be marked as inactive. In the event a client connects at any later point, it will be treated as a new client. There is no maximum number of clients, which allows theoretically for an unlimited linear growth in performance. The server keeps track of what passwords were sent to what client. This prevents losing passwords in case a client becomes unresponsive. Once a client is marked inactive, all passwords that were currently processed by it are eventually resent to another client. 
-
-On every client connection (excluding heart beats) an update is logged. This update contains the current number of active clients and an estimate of the current recovery speed. Every password has to go through a hashing process to be verified. Therefore, the speed is represented by the number of tried passwords per second. The speed is naïvely computed as the ratio of the elapsed time and passwords processed by clients. This implies that the server cannot estimate a speed before at least one client asks repeatedly for more passwords. The server will automatically shut down when it receives the correct password from a client.
+\subsection{Client}
 
 The client can be run using the following command:
 \begin{lstlisting}
@@ -737,11 +746,7 @@ $ python client.py [-h] tcp_ip tcp_port
 
 The \textit{tcp\_ip} and \textit{tcp\_port} are the connection parameters used to communicate with the server. The optional \textit{–h} argument will show a descriptive help message. 
 
-Once run, the client generates a UUID and immediately sends a message to the server asking for a password list and any verification data. This information is then passed to the brute-force engine described in Subsection \ref{brute_force_engine}. The actual brute-forcing is separated from the client on purpose. The reason for this is to keep the system as modular as possible. It is important to note that this approach allows any brute-force engine to be used (e.g., hashcat or JtR \cite{hashcat, jtr} described in more detail in Section \ref{related_work}).\label{jtrhc_modular} Once complete, the result is sent to the server. In the event the password was not found, the client will receive a new password list and repeat the whole process.
-
-\subsection{Document parsers} \label{doc_parsers}
-
-The document parsers are stand-alone Python scripts that take document files as input and return all  data necessary for the verification process. Note that the scripts used to extract information from PDF and MS Office files were not created as part of this thesis, but were taken from the public \textit{John the Ripper} GitHub repository.\footnote{Available at \textit{https://github.com/magnumripper/JohnTheRipper}} Small modifications were made to these scripts, to better fit into the developed system. All changes are included as comments in the respective files. Parsing of ODF files was implemented as part of this thesis. The parser accepts as valid input ODF files conforming to the latest specifications (version 1.2). This is mainly to ensure that the optimal file, from the ODT package, is chosen for verification (as noted in Subsection \ref{odt_file_note}).
+Once run, the client generates a UUID and immediately sends a message to the server asking for a password list and verification data. This information is then passed to the brute-force engine described in Subsection \ref{brute_force_engine}. The actual brute-forcing is separated from the client on purpose. The reason for this is to keep the system as modular as possible. It is important to note that this approach allows any brute-force engine to be used (e.g., hashcat or JtR \cite{hashcat, jtr} described in more detail in Section \ref{related_work}).\label{jtrhc_modular} Once complete, the result is sent to the server. In the event the password was not found, the client will receive a new password list and repeat the whole process.
 
 \subsection{Brute-force engine}\label{brute_force_engine}
 
@@ -792,7 +797,7 @@ def _call_pdf_core(pwd, input_data):
 \end{lstlisting}
 
 
-In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them, it is necessary to add a link to the library (i.e., using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
+In a similar fashion these verifiers can be called directly and accept a \textit{–v} argument to enable verbose output for debugging purposes. Note that the verifiers use the OpenSSL library for C \cite{openssl} to perform all cryptographic operations. Therefore, when compiling them, it is necessary to add a link to the library (i.e. using \textit{-lssl} and \textit{-lcrypto} switches when compiling with \textit{GCC}).
 
 Additionally, the script provides a public \textit{init()} method that, requires either a password range or a list of passwords as an argument. If a password range is given, then the script generates its own list. This is done using a naïve generator, which generates all possible variations of words consisting of lower case letters up to the given range. As an example, if the specified range is 2, then the resulting generated word list contains the characters \textit{a} to \textit{z} and words \textit{aa} to \textit{zz}. Otherwise, the provided list of passwords is directly placed into a synchronized processing queue. The second approach is used in the client-server model discussed in Subsection \ref{client-server}. It is important to note that this allows the engine to be easily modified to use a wordlist as input. A wordlist approach can, in general, be more efficient than plain brute-forcing of passwords, which can in turn result in a faster password recovery.
 
@@ -877,7 +882,7 @@ Note that the PDF variants were chosen to highlight differences between various 
 
 Every test lasted six hours. The password chunk size was set to 50,000, i.e. every client received a list of 50,000 unique passwords after connecting to the server. 
 
-Figure \ref{average_speed} shows how much passwords were checked within 1 second. A lower speed means that the protection mechanism used by the document is more prone to offline brute-force attacks. Clearly, the best protection is standard encryption used by documents created in Microsoft Word 2007. Note that newer versions of Microsoft Word use by default an even more secure approach (agile encryption with a default password spin count of 100,000).
+Figure \ref{average_speed} shows how much passwords were checked within 1 second. A lower number of passwords per second means that the protection mechanism used by the document is more resistant to offline brute-force attacks. Clearly, the best protection is standard encryption used by documents created in Microsoft Word 2007. Note that newer versions of Microsoft Word use by default an even more secure approach (agile encryption with a default password spin count of 100,000).
 
 \begin{figure}[ht]
 	\centering
@@ -913,11 +918,11 @@ Table \ref{real_world_time} shows time necessary to recover passwords of specifi
 	\label{real_world_time}
 \end{table}
 
-It should be mentioned that these results do not represent the brute-force capabilities of modern technology. Any decent tool leveraging parallelism provided by high-end GPUs will most probably achieve better results in terms of performance. Further work may include implementing such tools as clients for our distributed password recovery system. 
+It should be mentioned that these results do not represent the brute-force capabilities of modern technology. Any decent tool leveraging parallelism provided by high-end GPUs will most probably achieve better results in terms of performance. Further work may include implementing such tools as clients for our distributed password recovery system. Combining the strengths of our distributed password recovery system and the power provided by GPU-powered tools would significantly reduce time needed to successfully recover a password.
 
 \chapter{Conclusion}
 
-The aim of this thesis was to discuss and evaluate protection mechanisms offered by widely used electronic document formats. Among commonly used formats, the thesis evaluated three of those, namely Portable Document Format, Open Document Format and formats used by Microsoft Office documents. The main focus was on mechanisms providing confidentiality, which is commonly ensured by document encryption. 
+The aim of this thesis was to discuss and evaluate protection mechanisms offered by widely used electronic document formats. Among commonly used formats, the thesis evaluated three of those, namely Portable Document Format, Open Document Format and formats used in Microsoft Office documents. The main focus was on mechanisms providing confidentiality, which is commonly ensured by document encryption. 
 
 The first part provides a necessary insight into the relevant parts of the document format specifications. Furthermore, design decisions and their implications are discussed. The strengths and weaknesses of all three formats are highlighted in chapters' summaries. Mentioned are also relevant details about actual implementations widely used. The level of detail is chosen, to provide relevant knowledge to the reader without the need to study the corresponding specifications in depth.
 
