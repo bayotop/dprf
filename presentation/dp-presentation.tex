@@ -115,25 +115,45 @@ pdflang    = {cs}
 
 \begin{frame}
 	\frametitle{MS Office Document Cryptography Structure}
-	\itemtitle{Implementované ochrany}
+	\itemtitle{Binárny formát vs. XML}
 	\begin{itemize}
-		\item Šifrovanie podľa ECMA-376.
-		\begin{itemize}
-			\item Štandardné šifrovanie.
-			\item Agilné šifrovanie.
-		\end{itemize}
-		\item Digitalné podpisy.
-		\item Ochrana proti zápisu.
+		\item Open Office XML (ECMA-376).
+		\item Spätná kompatibilita.
 	\end{itemize}
 	\bigskip
-	\itemtitle{Zhrnutie}
-		\begin{itemize}
-			\item Neustále zlepšovaná miera zabezpečenia a používané algoritmy.
-			\item Udržiavaná spätná kompatibilita.
-		\end{itemize}
+	\itemtitle{Šifrovanie na základe hesla}
+	\begin{itemize}
+		\item Algoritmus na deriváciu kľúču podobný PBKDF.
+		\item Štandardné vs. agilné šifrovanie.
+	\end{itemize}
+	\bigskip
+	\itemtitle{Ochrana proti zápisu}
+	\begin{itemize}
+		\item  Uplatnenie iba z pohľadu UX.
+	\end{itemize}
+	\bigskip
+	\itemtitle{Digitalné podpisy}
+	\begin{itemize}
+		\item  \textit{XML Signature Syntax and Processing} (W3C).
+	\end{itemize}
+
+
 \end{frame}
 
 %-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Štandardné vs. agilné šifrovanie}
+	\begin{itemize}
+		\item Binárny formát vs. XML
+		\item Fixné algoritmy a parametre vs. CNG (\textit{CryptoAPI: Next Generation})
+		\item Šifrovací kĺúč (tzv. \textit{intermediate key})
+		\item Integrita (\textit{Encrypt then MAC}). 
+	\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
 
 \begin{frame}
 	\frametitle{Portable Document Format}
@@ -185,6 +205,7 @@ pdflang    = {cs}
 	\begin{figure}[h]
 		\centering
 		\includegraphics[width=100mm]{images/ddpbf_design.pdf} \\	
+		\bigskip
 		\scriptsize{Návrh systému na obnovu zabudnutého hesla.}	
 	\end{figure}
 \end{frame}
@@ -227,7 +248,10 @@ pdflang    = {cs}
 	\hline
            \end{tabular}
 	\end{table}
-	\hspace{15mm}\scriptsize{Odhadovaný čas na dokončenie procesu obnovy hesla danej dĺžky.}
+\begin{center}	
+	\vspace{-5mm}
+	\scriptsize{Odhadovaný čas na dokončenie procesu obnovy hesla danej dĺžky.}
+\end{center}
 \end{frame}
 
 %-----------------------------------------------------------------------------%
