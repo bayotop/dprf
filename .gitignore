@@ -98,3 +98,5 @@ ENV/
 doc/thesis.pdf
 *.bbl
 doc/thesis.blg
+*.nav
+presentation/dp-presentation.snm

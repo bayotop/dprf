@@ -1,0 +1,275 @@
+\documentclass[xcolor=dvipsnames]{beamer}
+\usepackage[czech]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{graphicx}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{xmpmulti}
+\usepackage{caption}
+\usepackage{subcaption}
+
+
+% Nastavení beameru:
+\usetheme{Frankfurt}
+\usecolortheme[named=blue]{structure}   	 	
+\setbeamertemplate{items}[ball]                  % ball, circle, rectangle, default
+\setbeamertemplate{blocks}[rounded][shadow=true] % zaobleni boxu a stiny
+\setbeamertemplate{navigation symbols}{}         % vypne navigacni symboly
+
+% uprava spodnich informacnich list
+\setbeamertemplate{footline} {%
+ % see beamer/themes/outer/beamerouterthemeinfolines.sty
+  \leavevmode%
+  \hbox{%
+  \begin{beamercolorbox}[wd=.2\paperwidth,ht=2.25ex,dp=1ex,center]{author in head/foot}%
+    \usebeamerfont{author in head/foot}\insertshortauthor %~~(\insertshortinstitute)
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.6\paperwidth,ht=2.25ex,dp=1ex,center]{title in head/foot}%
+    \usebeamerfont{title in head/foot}\insertshorttitle{}
+  \end{beamercolorbox}%
+  \begin{beamercolorbox}[wd=.2\paperwidth,ht=2.25ex,dp=1ex,right]{date in head/foot}%
+    \usebeamerfont{date in head/foot}\insertshortdate{}\hspace*{2ex}
+    \insertframenumber{} / \inserttotalframenumber\hspace*{2ex}
+  \end{beamercolorbox}}%
+  \vskip0pt%
+}
+
+% Tohle rozchodi tecky v zahlavi prezentace:
+\usepackage{remreset}
+\makeatletter
+\@removefromreset{subsection}{section}
+\makeatother
+\setcounter{subsection}{1}
+
+%\def\itemtitle#1{{\usebeamercolor[fg]{item}\bfseries#1\smallskip}}
+\def\itemtitle#1{{\bfseries#1\smallskip}}
+\def\myverb#1{{\footnotesize\texttt{#1}\normalsize}}
+
+% Informace o dokumentu pro titulni stránku a informacni listy
+\subtitle{Obhajoba diplomovej práce}
+\title[Ochrana elektronických dokumentov]{Ochrana elektronických dokumentov}
+\author[Martin Bajaník]{Martin Bajaník}
+\institute[FI MU]{Fakulta informatiky\\Masarykova univerzita\\\texttt{martin.bajanik@gmail.com}}
+\date[10. 2. 2017]{Brno, 16. februára 2017}
+
+% PDF settings
+\hypersetup{%
+unicode=true,                % čeština v záložkách
+pdfpagelayout=SinglePage,    % SinglePage, OneColumn, TwoColumnLeft, TwoColumnRight
+pdfstartview=FitV,           % Fit, FitB, FitH, FitV
+pdftitle   = {Analyza sifrovanej prevadzky},
+pdfauthor  = {Martin Bajanik - martin.bajanik@gmail.com},
+pdfsubject = {Fakulta informatiky, Masarykova univerzita},
+pdfkeywords= {SSL, TLS, šifrovaná prevádzka, OpenSSL, FlowMon, IPFIX},
+pdflang    = {cs}
+}
+
+% ----- The next line is important when dealing with alpha channels
+% see http://bmeps.sourceforge.net/examples.html
+\pdfpageattr {/Group << /S /Transparency /I true /CS /DeviceRGB>>}
+
+\begin{document}
+
+%------------------------------- titulní slide -------------------------------%
+
+\section{Úvod}
+\begin{frame}
+  \titlepage
+\end{frame}
+
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Cieľ diplomovej práce}	
+	\begin{itemize}
+		\item Poskytnúť ucelený prehľad ochrán, implementovaných v najrozšírenejších formátoch, s dôrazom na ochranu dôvernosti dokumentov založenej na heslách. 
+		\item Vytvoriť distribuovaný systém na obnovu zabudnutého hesla.
+		\item Pomocou vytvoreného nástroja zhodnotiť schopnosť formátov odolať útokom hrubou silou a použitelnosť systému na obnovu hesla.  
+	\end{itemize}
+	
+\end{frame}
+
+%----------------------------------- Úvod ------------------------------------%
+
+\section{Ochrana elektronických dokumentov}
+\begin{frame}\frametitle{Ochrana elektronických dokumentov}
+	\itemtitle{Spôsob ochrany}
+	\begin{itemize}
+		\item Šifrovanie - dôvernosť
+		\item Digitálne podpisy - autenticita a integrita
+	\end{itemize}
+	\bigskip
+	\itemtitle{Populárne formáty}
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=100mm]{images/docs_logos.pdf} \\
+		\vspace{-1mm}		
+	\end{figure}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{MS Office Document Cryptography Structure}
+	\itemtitle{Implementované ochrany}
+	\begin{itemize}
+		\item Šifrovanie podľa ECMA-376.
+		\begin{itemize}
+			\item Štandardné šifrovanie.
+			\item Agilné šifrovanie.
+		\end{itemize}
+		\item Digitalné podpisy.
+		\item Ochrana proti zápisu.
+	\end{itemize}
+	\bigskip
+	\itemtitle{Zhrnutie}
+		\begin{itemize}
+			\item Neustále zlepšovaná miera zabezpečenia a používané algoritmy.
+			\item Udržiavaná spätná kompatibilita.
+		\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Portable Document Format}
+	\itemtitle{Implementované ochrany}
+	\begin{itemize}
+		\item Šifrovanie.
+		\begin{itemize}
+			\item \textit{Standard Security Handler}
+			\item \textit{Public-Key Security Handler}	
+		\end{itemize}
+		\item Digitalné podpisy.
+	\end{itemize}
+	\bigskip
+	\itemtitle{Zhrnutie}
+	\begin{itemize}
+		\item Otázne spôsoby šifrovania.  
+		\item Pokročilá funkcionalita spojená s digitálnymi podpismi. 
+	\end{itemize}
+	
+
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Open Document Format}
+	\itemtitle{Implementované ochrany}
+	\begin{itemize}
+		\item Šifrovanie.
+		\item Digitalné podpisy.
+	\end{itemize}
+	\bigskip
+	\itemtitle{Zhrnutie}
+	\begin{itemize}
+		\item Jednoduchý a efektívny spôsob ochrany.  
+	\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\section{Distribuovaný systém na obnovu hesla}
+\begin{frame}
+	\itemtitle{Kľučové vlastnosti}
+	\begin{itemize}
+		\item Klient -- server architektúra
+		\item Modularita a paralelizmus
+	\end{itemize}
+	\bigskip
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=100mm]{images/ddpbf_design.pdf} \\	
+		\scriptsize{Návrh systému na obnovu zabudnutého hesla.}	
+	\end{figure}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Obnova hesla dokumentov hrubou silou}
+	
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=100mm]{images/average_speed.pdf} \\	
+		\bigskip
+		\scriptsize{Priemerná rychlosť verifikácie správnosti hesla (počet pokusov za sekundu).}	
+	\end{figure}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Obnova hesla dokumentov hrubou silou}
+	
+	 \begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|l|l|}
+           \hline
+		&\textbf{MS Word 2007}&\textbf{LibreOffice Writer 5.2.2}&\textbf{PDF 1.7 V4 R5}\\
+	\hline
+		3&< 25 seconds&< 9 seconds&< 6 seconds\\
+	\hline
+		4&< 10 minutes&< 4 minutes&< 2.5 minutes\\
+	\hline
+		5&< 5 hours& < 2 hours&< 1.1 hours\\
+	\hline
+		6&< 5 days&< 2 days&< 1.2 days\\
+	\hline
+		7&< 17 weeks&< 7 weeks&< 4.2 weeks\\
+	\hline
+		8&< 9 years&< 3.5 years&< 2.1 years\\
+	\hline
+           \end{tabular}
+	\end{table}
+	\hspace{15mm}\scriptsize{Odhadovaný čas na dokončenie procesu obnovy hesla danej dĺžky.}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\section{Záver}
+\begin{frame}
+	\frametitle{Záver}
+
+	\itemtitle{Hlavné prínosy práce}
+	\begin{itemize}
+		\item Ucelený popis ochrán implemetovaných v populárnych formátoch elektronických dokumentov.
+		\item Vytvorený funkčný distribuovaný systém na obnovu zabudnutého hesla s dôrazom na použiteľnosť a rozšíriteľnosť.
+	\end{itemize}
+		
+\end{frame}
+
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+   \frametitle{Otázky}
+ 	\vspace*{\fill}
+
+ 	\begin{center} 		
+ 		\huge\bfseries\usebeamercolor[fg]{item} Ďakujem za pozornosť.\\~\\
+ 	\end{center}
+ 	\vspace*{\fill}
+ \end{frame}
+
+%-----------------------------------------------------------------------------%
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Pripomienky oponenta}
+	\begin{itemize}
+		\item Diskuze algoritmů dostupných přes API v OS Windows (str.~8) mohla být podrobnější.
+		\item Co je to veřejná část certifikátu X.509?
+		\item Zajímavé by bylo zmínit, proč byla vybrána MS právě tato fixní hesla (strana 11).
+		\item Jsou násobné podpisy (např. v sekci 3.3:2) na stejné úrovni nebo hierarchicky řazené. 
+	\end{itemize}
+
+\end{frame}
+
+\end{document}
