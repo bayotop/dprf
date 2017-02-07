@@ -51,9 +51,9 @@
 % Informace o dokumentu pro titulni stránku a informacni listy
 \subtitle{Obhajoba diplomovej práce}
 \title[Ochrana elektronických dokumentov]{Ochrana elektronických dokumentov}
-\author[Martin Bajaník]{Martin Bajaník}
-\institute[FI MU]{Fakulta informatiky\\Masarykova univerzita\\\texttt{martin.bajanik@gmail.com}}
-\date[10. 2. 2017]{Brno, 16. februára 2017}
+\author[Bc. Martin Bajaník]{Bc. Martin Bajaník}
+\institute[FI MU]{Fakulta informatiky\\Masarykova univerzita\\\texttt{396204@mail.muni.cz}}
+\date[10. 2. 2017]{Brno, 10. februára 2017}
 
 % PDF settings
 \hypersetup{%
@@ -61,7 +61,7 @@ unicode=true,                % čeština v záložkách
 pdfpagelayout=SinglePage,    % SinglePage, OneColumn, TwoColumnLeft, TwoColumnRight
 pdfstartview=FitV,           % Fit, FitB, FitH, FitV
 pdftitle   = {Analyza sifrovanej prevadzky},
-pdfauthor  = {Martin Bajanik - martin.bajanik@gmail.com},
+pdfauthor  = {Martin Bajanik - 396204@mail.muni.cz},
 pdfsubject = {Fakulta informatiky, Masarykova univerzita},
 pdfkeywords= {SSL, TLS, šifrovaná prevádzka, OpenSSL, FlowMon, IPFIX},
 pdflang    = {cs}
@@ -111,44 +111,34 @@ pdflang    = {cs}
 	\end{figure}
 \end{frame}
 
-%-----------------------------------------------------------------------------%
+%----------------------------------- Úvod ------------------------------------%
 
-\begin{frame}
-	\frametitle{MS Office Document Cryptography Structure}
-	\itemtitle{Binárny formát vs. XML}
-	\begin{itemize}
-		\item Open Office XML (ECMA-376).
-		\item Spätná kompatibilita.
-	\end{itemize}
-	\bigskip
-	\itemtitle{Šifrovanie na základe hesla}
-	\begin{itemize}
-		\item Algoritmus na deriváciu kľúču podobný PBKDF.
-		\item Štandardné vs. agilné šifrovanie.
-	\end{itemize}
-	\bigskip
-	\itemtitle{Ochrana proti zápisu}
-	\begin{itemize}
-		\item  Uplatnenie iba z pohľadu UX.
-	\end{itemize}
-	\bigskip
-	\itemtitle{Digitalné podpisy}
-	\begin{itemize}
-		\item  \textit{XML Signature Syntax and Processing} (W3C).
-	\end{itemize}
-
-
+\begin{frame}\frametitle{Šifrovanie na základe hesla}
+	\begin{figure}[h]
+		\centering
+		\includegraphics[width=100mm]{images/password_encryption_schema.pdf} \\
+		\vspace{-1mm}		
+	\end{figure}
 \end{frame}
 
 %-----------------------------------------------------------------------------%
 
 \begin{frame}
-	\frametitle{Štandardné vs. agilné šifrovanie}
+	\frametitle{MS Office Document Cryptography Structure}
+	\itemtitle{Šifrovanie na základe hesla}
 	\begin{itemize}
-		\item Binárny formát vs. XML
-		\item Fixné algoritmy a parametre vs. CNG (\textit{CryptoAPI: Next Generation})
-		\item Šifrovací kĺúč (tzv. \textit{intermediate key})
-		\item Integrita (\textit{Encrypt then MAC}). 
+		\item Open Office XML (ECMA-376)
+		\item Štandardné šifrovanie (Office 2007)
+		\begin{itemize}
+			\item 50 000 iterácií
+			\item SHA-1
+		\end{itemize}
+		\item Agilné šifrovanie (Office 2010 a vyššie)
+		\begin{itemize}
+			\item 100 000 iterácií
+			\item SHA-1
+			\item Konfigurovateľné užívateľom
+		\end{itemize}
 	\end{itemize}
 \end{frame}
 
@@ -157,61 +147,40 @@ pdflang    = {cs}
 
 \begin{frame}
 	\frametitle{Portable Document Format}
-	\itemtitle{Vlastník vs. užívateľ} \\
-	\bigskip
 	\itemtitle{Šifrovanie na základe hesla}
 	\begin{itemize}
-		\item Derivácia kľúču 
-		\item PDF 1.1-1.3 vs. PDF 1.4-1.7 vs. PDF 1.7 r5, r6.
-		\item MD5 + RC4 vs. SHA-256 vs. AES-128 + SHA-2
-	\end{itemize}
-	\bigskip
-	\itemtitle{Šifrovanie pomocou asymetrickej kryptografie}
-	\begin{itemize}
-		\item Dokument šifrovaný pomocou RC4.	
-	\end{itemize}
-	\bigskip
-	\itemtitle{Digitalné podpisy}
-	\begin{itemize}
-		\item Pokročilá funkcionalita a robustné algoritmy.
+		\item Samostatný šifrovací modul (\textit{Standard Security Handler}) 
+		\item PDF 1.1 - 1.3
+		\begin{itemize}
+			\item 50 iterácií MD5
+		\end{itemize}
+		\item PDF 1.4 - 1.7
+		\begin{itemize}
+			\item 50 iterácií MD5 a 19 iterácií RC4
+		\end{itemize}
+		\item PDF 1.7 s modulom verzie 5
+		\begin{itemize}
+			\item 1 iterácia SHA-256
+		\end{itemize}
+		\item PDF 1.7 s modulom verzie 6
+		\begin{itemize}
+			\item 32 iterácií SHA-2 a AES-128
+		\end{itemize}
 	\end{itemize}	
-
 \end{frame}
 
 %-----------------------------------------------------------------------------%
 
 \begin{frame}
 	\frametitle{Open Document Format}
-	\itemtitle{Šifrovanie}
+	\itemtitle{Šifrovanie na základe hesla}
 	\begin{itemize}
-		\item Verzia 1.1 vs. 1.2
-		\item \textit{XML Encryption Syntax and Processing} (W3C)
-		\item \texttt{META-INF/manifest.xml}.
+		\item Verzia 1.0 - 1.2
+		\begin{itemize}
+			\item 1024 iterácií PBKDF2 s HMAC-SHA1 (RFC 2898)
+			\item Počet iterácií konfigurovateľný
+		\end{itemize}
 	\end{itemize}
-	\itemtitle{Digitalné podpisy}
-	\begin{itemize}
-		\item  \textit{XML Signature Syntax and Processing} (W3C).
-	\end{itemize}
-	\bigskip
-	\itemtitle{Apache OpenOffice vs. LibreOffice}
-	\begin{table}[h]
-	\centering
-	\begin{tabular}{|l|l|l|}
-               \hline
-		&\textbf{LibreOffice}&\textbf{Apache OpenOffice}\\
-	\hline
-		checksum-type&SHA-256&SHA-1\\
-	\hline
-		algorithm-name&AES-256&Blowfish CFB\\
-	\hline
-		start-key-derivation-name&SHA-256&SHA-1\\
-		key-derivation-name&PBKDF2&PBKDF2\\
-		iteration-count&1024&1024\\
-		key-size&32&16\\
-	\hline
-           \end{tabular}
-	\end{table}
-
 \end{frame}
 
 %-----------------------------------------------------------------------------%
@@ -228,7 +197,7 @@ pdflang    = {cs}
 		\centering
 		\includegraphics[width=100mm]{images/ddpbf_design.pdf} \\	
 		\bigskip
-		\scriptsize{Návrh systému na obnovu zabudnutého hesla.}	
+		\scriptsize{Návrh systému na obnovu zabudnutého hesla}	
 	\end{figure}
 \end{frame}
 
@@ -241,8 +210,62 @@ pdflang    = {cs}
 		\centering
 		\includegraphics[width=100mm]{images/average_speed.pdf} \\	
 		\bigskip
-		\scriptsize{Priemerná rychlosť verifikácie správnosti hesla (počet pokusov za sekundu).}	
+		\scriptsize{Priemerná rychlosť verifikácie správnosti hesla (počet pokusov za sekundu)}	
 	\end{figure}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\section{Záver}
+\begin{frame}
+	\frametitle{Záver}
+
+	\itemtitle{Hlavné prínosy práce}
+	\begin{itemize}
+		\item Ucelený popis ochrán implemetovaných v populárnych formátoch elektronických dokumentov.
+		\item Zhodnotenie dostupných ochrán a testovanie odolnosti voči útokom hrubou silou. 
+		\item Vytvorený funkčný distribuovaný systém na obnovu zabudnutého hesla s dôrazom na:
+		\begin{itemize}
+			\item rozšíriteľnosť vďaka modulárnemu prístupu,
+			\item efektívnosť vďaka paralelizácii na viac úrovniach a
+			\item jednoduchú použiteľnosť.
+		\end{itemize}
+	\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+   \frametitle{Otázky}
+ 	\vspace*{\fill}
+
+ 	\begin{center} 		
+ 		\huge\bfseries\usebeamercolor[fg]{item} Ďakujem za pozornosť.\\~\\
+ 	\end{center}
+ 	\vspace*{\fill}
+ \end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Otázky z posudkov}
+	\begin{itemize}
+		\item Co je to veřejná část certifikátu X.509?
+		\item Zajímavé by bylo zmínit, proč byla vybrána MS právě tato fixní hesla (strana 11).
+		\item Jsou násobné podpisy (např. v sekci 3.3:2) na stejné úrovni nebo hierarchicky řazené?
+	\end{itemize}
+\end{frame}
+
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+	\frametitle{Štandardné vs. agilné šifrovanie}
+	\begin{itemize}
+		\item Binárny formát vs. XML
+		\item Fixné algoritmy a parametre vs. CNG (\textit{CryptoAPI: Next Generation})
+		\item Šifrovací kĺúč (tzv. \textit{intermediate key})
+		\item Integrita (\textit{Encrypt then MAC}). 
+	\end{itemize}
 \end{frame}
 
 %-----------------------------------------------------------------------------%
@@ -278,44 +301,79 @@ pdflang    = {cs}
 
 %-----------------------------------------------------------------------------%
 
-\section{Záver}
 \begin{frame}
-	\frametitle{Záver}
-
-	\itemtitle{Hlavné prínosy práce}
+\frametitle{Ďaľšie ochrany}
+	\itemtitle{Ochrana proti zápisu (MS Office)}
 	\begin{itemize}
-		\item Ucelený popis ochrán implemetovaných v populárnych formátoch elektronických dokumentov.
-		\item Vytvorený funkčný distribuovaný systém na obnovu zabudnutého hesla s dôrazom na použiteľnosť a rozšíriteľnosť.
+		\item  Uplatnenie iba z pohľadu UX.
 	\end{itemize}
-		
+	\bigskip
+	\itemtitle{Šifrovanie pomocou asymetrickej kryptografie (PDF)}
+	\begin{itemize}
+		\item Dokument šifrovaný pomocou RC4.	
+	\end{itemize}
+	\bigskip
+	\itemtitle{Digitalné podpisy}
+	\begin{itemize}
+	\item Microsoft Office a Open Document Format
+	\begin{itemize}
+		\item  XML Signature Syntax and Processing (W3C)
+	\end{itemize}
+	\item Portable Document Format
+	\begin{itemize}
+		\item  Pokročilá funkcionalita a robustné algoritmy.
+	\end{itemize}
+	\end{itemize}
 \end{frame}
 
+%-----------------------------------------------------------------------------%
+
+\begin{frame}
+\frametitle{Porovnanie implementácii ODT}
+	\itemtitle{Apache OpenOffice vs. LibreOffice}
+	\begin{table}[h]
+	\centering
+	\begin{tabular}{|l|l|l|}
+               \hline
+		&\textbf{LibreOffice}&\textbf{Apache OpenOffice}\\
+	\hline
+		checksum-type&SHA-256&SHA-1\\
+	\hline
+		algorithm-name&AES-256&Blowfish CFB\\
+	\hline
+		start-key-derivation-name&SHA-256&SHA-1\\
+		key-derivation-name&PBKDF2&PBKDF2\\
+		iteration-count&1024&1024\\
+		key-size&32&16\\
+	\hline
+           \end{tabular}
+	\end{table}
+\end{frame}
 
 %-----------------------------------------------------------------------------%
 
 \begin{frame}
-   \frametitle{Otázky}
- 	\vspace*{\fill}
-
- 	\begin{center} 		
- 		\huge\bfseries\usebeamercolor[fg]{item} Ďakujem za pozornosť.\\~\\
- 	\end{center}
- 	\vspace*{\fill}
- \end{frame}
-
-%-----------------------------------------------------------------------------%
-
-%-----------------------------------------------------------------------------%
-
-\begin{frame}
-	\frametitle{Pripomienky oponenta}
+\frametitle{Šifrovanie dokumentov - algoritmy}
 	\begin{itemize}
-		\item Diskuze algoritmů dostupných přes API v OS Windows (str.~8) mohla být podrobnější.
-		\item Co je to veřejná část certifikátu X.509?
-		\item Zajímavé by bylo zmínit, proč byla vybrána MS právě tato fixní hesla (strana 11).
-		\item Jsou násobné podpisy (např. v sekci 3.3:2) na stejné úrovni nebo hierarchicky řazené. 
+	\item Microsoft Office
+	\begin{itemize}
+		\item  Štandardné šifrovanie - AES-128, AES-192, AES-256 (ECB)
+		\item Agilné šifrovanie - Windows OS API (CNG)
 	\end{itemize}
-
+	\item Portable Document Format
+	\begin{itemize}
+		\item RC4, AES-128 (CBC)
+		\item Dĺžky kľúčov 40-128 bitov
+	\end{itemize}
+	\item Open Document Format
+	\begin{itemize}
+		\item  1.0 a 1.1 - Blowfish CFB
+		\item 1.2 - Triple DES, AES-128, AES-192, AES-256 (CBC)
+		\begin{itemize}
+			\item XML Encryption Syntax and Processing (W3C)
+		\end{itemize}
+	\end{itemize}
+	\end{itemize}
 \end{frame}
 
 \end{document}
