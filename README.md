@@ -19,7 +19,7 @@ The document parsers are stand-alone Python scripts that take document files as 
 The server provides a simple command line interface and can be started using the following command:
 
 ```
-$ python server.py [-h] [-pr PASSWORDRANGE ] [-ps PAYLOADSIZE ] document_type filename tcp_ip tcp_port
+$ server.py [-h] [-pr PASSWORDRANGE ] [-ps PAYLOADSIZE ] document_type filename tcp_ip tcp_port
 ```
 * **-h** – Shows a descriptive help message.
 * **-pr** – Sets the password’s maximum length (default: 8). Note that all passwords up to the specified length will be checked.
@@ -36,7 +36,7 @@ $ python server.py [-h] [-pr PASSWORDRANGE ] [-ps PAYLOADSIZE ] document_type fi
 
 The client can be run using the following command:
 ```
-$ python client.py [-h] tcp_ip tcp_port
+$ client.py [-h] tcp_ip tcp_port
 ```
 The tcp_ip and tcp_port are the connection parameters used to communicate with the server. The optional –h argument will show a descriptive help message.
 
@@ -45,7 +45,7 @@ The tcp_ip and tcp_port are the connection parameters used to communicate with t
 The brute-force engine can be used either as a stand-alone Python script providing a simple command line interface, or as a Python module. When run separately, it can be started using the following command:
 
 ```
-$ python brute_force .py [-h] [-pr PASSWORDRANGE ] document_type filename
+$ brute_force.py [-h] [-pr PASSWORDRANGE ] document_type filename
 ```
 
 ### Compilation:
