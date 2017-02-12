@@ -207,7 +207,7 @@ A more detailed description of these settings can be found on the Microsoft Deve
 
 Further specified are the steps necessary for deriving keys, generating initialization vectors, and generating a password key encryption structure. This structure is used to verify the correctness of the entered password when trying to open a file and it holds, encrypted, the key used to encrypt the plain-text document. Later in this chapter, this key is referred to as the intermediate key. Appendix \ref{ei_password_encryptor} shows the schema specifying its structure.
 
-For the sake of completeness, it is important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using the public part of an X.509 certificate instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account.
+For the sake of completeness, it is important to mention that this structure can be represented as a \textit{CertificateKeyEncryptor} structure. The notable difference is that the intermediate key is encrypted using a public key instead of a user-supplied password. However, during the research no encrypted document was using this type of key encryptor structure nor was any information found about how to create a document using this type of protection. As a result this approach is not taken into account.
 
 The key derivation process is similar to the method used in standard encryption and also derived from PKCS \#5 \cite{rfc2898}:
 
@@ -227,7 +227,7 @@ The key derivation process is similar to the method used in standard encryption 
 \item{If the length of $H_{final}$ is smaller than the key length specified in the \textit{EncryptionInfo}, then the key must be padded by appending bytes with a value of $0x36$. If it is longer, it is truncated to the correct length.}
 \end{enumerate}
 
-Note that, unlike in standard encryption, $H()$ is not a fixed hashing algorithm and the $block$ variable depends on the purpose of the key that is being derived. Another difference is that $H_{final}$ is the final key.
+Note that, unlike in standard encryption, $H()$ is not a fixed hashing algorithm and the $blockKey$ variable depends on the purpose of the key that is being derived. Another difference is that $H_{final}$ is the final key.
 
 Initialization vectors are generated as shown in the following steps:
 \begin{enumerate}\label{IVgen}
@@ -493,7 +493,7 @@ Algorithms mentioned up to this point, are all publicly available and documented
 
 In addition to password-based encryption, security handlers may use asymmetric encryption. Instead of specifying a password, it is necessary to specify one or more  lists of recipients. Every such list can have different access permissions specified. 
 
-When encrypting a document using a public-key security handler, each recipient's X.509 public certificate part must be available. When opening such a protected document, the recipient has to provide the corresponding private key.
+When encrypting a document using a public-key security handler, each recipient's X.509 public certificate must be available. When opening such a protected document, the recipient has to provide the corresponding private key.
 
 A public-key encryption dictionary is mostly similar to a password-based encryption dictionary. It contains one extra field named \textit{Recipients}. It represents an array of lists of recipients. Within one list all recipients have the same access permissions. 
 
